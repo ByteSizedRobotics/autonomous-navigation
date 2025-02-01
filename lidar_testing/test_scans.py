@@ -1,3 +1,8 @@
+# Code used to confirm the lidar works
+# Connect the lidar via the microUSB - USB cable to laptop
+# Check the port name, on mac/linux use "ls /dev/cu.*" in terminal
+# Idk how on windows maybe check Device Manager
+
 import numpy as np
 import matplotlib.pyplot as plt
 from rplidar import RPLidar
