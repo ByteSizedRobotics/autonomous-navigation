@@ -18,11 +18,11 @@ PORT_NAME = '/dev/cu.usbserial-10'
 lidar = RPLidar(PORT_NAME)
 
 # Set up the figure and polar plot
-fig = plt.figure()
+fig = plt.figure(dpi=120)  # Increase DPI for higher resolution
 ax = plt.subplot(111, projection='polar')
 ax.set_theta_zero_location('N')  # Set 0° to be at the top
 ax.set_theta_direction(-1)       # Clockwise rotation
-scat = ax.scatter([], [], s=5)   # Empty scatter plot
+scat = ax.scatter([], [], s=2, c='blue', alpha=0.5)  # Smaller points with transparency
 
 # Change this to change max distance displayed, distance is in mm (1000mm = 1m)
 ax.set_rmax(1000) 
@@ -56,6 +56,13 @@ def clean_exit():
     lidar.disconnect()
     print("Lidar connection closed.")
 
+def on_key(event):
+    if event.key == 'up':
+        ax.set_rmax(ax.get_rmax() + 500)  # Zoom out
+    elif event.key == 'down':
+        ax.set_rmax(max(500, ax.get_rmax() - 500))  # Zoom in
+    plt.draw()
+
 try:
     # Start the lidar motor
     lidar.start_motor()
@@ -65,6 +72,9 @@ try:
     
     # Show the plot
     plt.show()
+
+    fig.canvas.mpl_connect('key_press_event', on_key)
+
 
 except KeyboardInterrupt:
     pass
