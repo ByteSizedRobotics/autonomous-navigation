@@ -18,10 +18,10 @@ PORT_NAME = '/dev/cu.usbserial-10'
 lidar = RPLidar(PORT_NAME)
 
 # Set up the figure and polar plot
-fig = plt.figure(dpi=120)  # Increase DPI for higher resolution
+fig = plt.figure(dpi=120)       # Increase DPI for higher resolution
 ax = plt.subplot(111, projection='polar')
-ax.set_theta_zero_location('N')  # Set 0° to be at the top
-ax.set_theta_direction(-1)       # Clockwise rotation
+ax.set_theta_zero_location('N') # Set 0° to be at the top
+ax.set_theta_direction(-1)      # Clockwise rotation
 scat = ax.scatter([], [], s=2, c='blue', alpha=0.5)  # Smaller points with transparency
 
 # Change this to change max distance displayed, distance is in mm (1000mm = 1m)
