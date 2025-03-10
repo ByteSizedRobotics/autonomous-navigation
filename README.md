@@ -1,9 +1,9 @@
 # Autonomous Navigation (AutoNav)
 
 ![Version](https://img.shields.io/badge/version-0.1-blue)
-![ROS](https://img.shields.io/badge/ROS-compatible-green)
+![ROS2](https://img.shields.io/badge/ROS2-compatible-green)
 
-A comprehensive solution for autonomous navigation using ROS, featuring obstacle detection, path planning, and more.
+A comprehensive solution for autonomous navigation using ROS2, featuring obstacle detection, path planning, and more.
 
 ## Overview
 
@@ -23,21 +23,21 @@ The initial version implements basic obstacle detection using a Lidar sensor.
 ## Installation
 
 ### Prerequisites
-- ROS1 Noetic
-- Ubuntu 20.04 (recommended)
+- ROS2 Jazzy
+- Ubuntu 24.04 (recommended)
 - Lidar sensor connected via USB
 
 ### Setup Instructions
 
 1. Clone the repository into your ROS2 workspace:
    ```bash
-   cd ~/rover_ws/src
+   cd ~/ros2_ws/src
    git clone https://github.com/ByteSizedRobotics/autonomous-navigation.git
    ```
 
 2. Navigate to your workspace directory:
    ```bash
-   cd ~/rover_ws
+   cd ~/ros2_ws
    ```
 
 3. Build the packages:
