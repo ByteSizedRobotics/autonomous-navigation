@@ -25,7 +25,6 @@ The initial version implements basic obstacle detection using a Lidar sensor.
 ### Prerequisites
 - ROS2 Jazzy
 - Ubuntu 24.04 (recommended)
-- Lidar sensor connected via USB
 
 ### Setup Instructions
 
