@@ -50,46 +50,6 @@ The initial version implements basic obstacle detection using a Lidar sensor.
    source install/setup.bash
    ```
 
-## Usage
-
-### Running Obstacle Detection
-
-1. Ensure your Lidar sensor is properly connected
-
-2. Set appropriate permissions for the USB device:
-   ```bash
-   sudo chmod 666 /dev/ttyUSB0
-   ```
-
-3. Launch the obstacle detection nodes:
-   ```bash
-   ros2 launch obstacle_detection obstacle_detector.launch.py
-   ```
-
-### NMEA GPS Driver installation
-
-1. Install and set up ROS2-Jazzy
-3. Install python3 (If not done already)
-4. sudo apt update
-5. sudo apt install ros-Jazzy-tf-transformations
-6. Move driver into a directory or pull from github
-7. Build node: colcon build --packages-select nmea_navsat_driver
-8. Make sure GPS unit is on correct port (usually /dev/ttyUSB01)
-9. source install/setup.bash
-10. ros2 run nmea_navsat_driver nmea_serial_driver
-
-*Note, BN-220 runs at 9600 baud
-
-### Expected Output
-
-When running successfully, you should see output similar to:
-
-![Obstacle Detection Output](https://github.com/user-attachments/assets/87bf6039-ba21-4f54-9947-c46dac4db427)
-
-## Configuration
-
-The detection radius and other parameters can be configured in the `config/obstacle_detector_params.yaml` file.
-
 ## Project Roadmap
 
 - [x] V0.1: Basic obstacle detection
