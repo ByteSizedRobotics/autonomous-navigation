@@ -1,0 +1,6 @@
+To use:
+
+1. Build with: colcon build --packages-select potrider
+2. source install/setup.bash 
+3. In one window; ros2 run potrider serial_motor_node --ros-args -p port:=/dev/ttyUSB0
+4. In another window; ros2 run potrider wasd_control
