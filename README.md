@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-0.1-blue)
 ![ROS](https://img.shields.io/badge/ROS-compatible-green)
 
-A comprehensive solution for autonomous navigation using ROS2, featuring obstacle detection, path planning, and more.
+A comprehensive solution for autonomous navigation using ROS, featuring obstacle detection, path planning, and more.
 
 ## Overview
 
