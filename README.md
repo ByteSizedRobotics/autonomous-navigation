@@ -66,7 +66,7 @@ The initial version implements basic obstacle detection using a Lidar sensor.
    ros2 launch obstacle_detection obstacle_detector.launch.py
    ```
 
-###NMEA GPS Driver installation
+### NMEA GPS Driver installation
 
 1. Install and set up ROS2-Jazzy
 3. Install python3 (If not done already)
