@@ -1,7 +1,7 @@
 # Autonomous Navigation (AutoNav)
 
 ![Version](https://img.shields.io/badge/version-0.1-blue)
-![ROS2](https://img.shields.io/badge/ROS2-compatible-green)
+![ROS](https://img.shields.io/badge/ROS-compatible-green)
 
 A comprehensive solution for autonomous navigation using ROS2, featuring obstacle detection, path planning, and more.
 
