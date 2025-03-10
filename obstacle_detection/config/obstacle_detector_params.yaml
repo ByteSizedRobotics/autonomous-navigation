@@ -1,0 +1,3 @@
+obstacle_detector:
+  ros__parameters:
+    distance_threshold: 0.25

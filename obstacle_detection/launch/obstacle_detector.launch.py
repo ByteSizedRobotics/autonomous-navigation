@@ -16,6 +16,9 @@ def generate_launch_description():
     inverted = LaunchConfiguration('inverted', default='false')
     angle_compensate = LaunchConfiguration('angle_compensate', default='true')
     scan_mode = LaunchConfiguration('scan_mode', default='Sensitivity')
+
+    package_dir = get_package_share_directory('obstacle_detection')
+    params_file = os.path.join(package_dir, 'config', 'obstacle_detector_params.yaml')
     
     return LaunchDescription([
 
@@ -70,6 +73,7 @@ def generate_launch_description():
             package='obstacle_detection',
             executable='obstacle_detector',
             name='obstacle_detector',
+            parameters=[params_file],
             output='screen'
         )
     ])
