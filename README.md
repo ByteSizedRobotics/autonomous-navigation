@@ -1,19 +1,88 @@
-# autonomous-navigation
+# Autonomous Navigation (AutoNav)
 
-This repo holds all code for the Autonomous Navigation (AutoNav).
+![Version](https://img.shields.io/badge/version-0.1-blue)
+![ROS2](https://img.shields.io/badge/ROS2-compatible-green)
 
-## V0.1 Obstacle Detection
-This version is the first version of the obstacle detection using the Lidar sensor.
-The algorithm is simple: it checks if there are ny points within a set radius. If any point is within the radius, an "obstacle" is detected.
+A comprehensive solution for autonomous navigation using ROS2, featuring obstacle detection, path planning, and more.
 
-### Steps to use
-1. Clone the src folder into your ROS2 workspace.
-2. In a terminal, cd into the workspace
-3. Run `colcon build —symlink-install`
-4. Before running, make sure the lidar is connected and accessible
-5. Run `sudo chmod 666 /dev/ttyUSB0`
-6. To run the nodes, run `ros2 launch obstacle_detection obstacle_detector.launch.py`
+## Overview
 
+This repository contains all code for the Autonomous Navigation (AutoNav) project. The system uses various sensors and algorithms to enable autonomous movement while avoiding obstacles.
 
-Once running, it should look like this in the terminal:
-<img width="953" alt="Screenshot 2025-03-08 at 3 10 16 PM" src="https://github.com/user-attachments/assets/87bf6039-ba21-4f54-9947-c46dac4db427" />
+## Features
+
+### V0.1 - Obstacle Detection
+
+The initial version implements basic obstacle detection using a Lidar sensor.
+
+**Approach:**
+- Scans the environment using Lidar sensor data
+- Detects obstacles by identifying points within a predefined radius
+- Simple yet effective algorithm for basic obstacle avoidance
+
+## Installation
+
+### Prerequisites
+- ROS1 Noetic
+- Ubuntu 20.04 (recommended)
+- Lidar sensor connected via USB
+
+### Setup Instructions
+
+1. Clone the repository into your ROS2 workspace:
+   ```bash
+   cd ~/rover_ws/src
+   git clone https://github.com/ByteSizedRobotics/autonomous-navigation.git
+   ```
+
+2. Navigate to your workspace directory:
+   ```bash
+   cd ~/rover_ws
+   ```
+
+3. Build the packages:
+   ```bash
+   colcon build --symlink-install
+   ```
+
+4. Source the workspace:
+   ```bash
+   source install/setup.bash
+   ```
+
+## Usage
+
+### Running Obstacle Detection
+
+1. Ensure your Lidar sensor is properly connected
+
+2. Set appropriate permissions for the USB device:
+   ```bash
+   sudo chmod 666 /dev/ttyUSB0
+   ```
+
+3. Launch the obstacle detection nodes:
+   ```bash
+   ros2 launch obstacle_detection obstacle_detector.launch.py
+   ```
+
+### Expected Output
+
+When running successfully, you should see output similar to:
+
+![Obstacle Detection Output](https://github.com/user-attachments/assets/87bf6039-ba21-4f54-9947-c46dac4db427)
+
+## Configuration
+
+The detection radius and other parameters can be configured in the `config/obstacle_detector_params.yaml` file.
+
+## Project Roadmap
+
+- [x] V0.1: Basic obstacle detection
+- [ ] V0.2: Improved obstacle detection
+- [ ] V0.3: Path planning
+- [ ] V1.0: Full autonomous navigation
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
