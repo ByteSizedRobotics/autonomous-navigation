@@ -15,7 +15,7 @@ class ObstacleDetector(Node):
             10
         )
         # You can set a threshold (in meters) for detecting obstacles
-        self.declare_parameter('distance_threshold', 0.5)
+        self.declare_parameter('distance_threshold', 0.25)
 
     def scan_callback(self, msg: LaserScan):
         threshold = self.get_parameter('distance_threshold').value

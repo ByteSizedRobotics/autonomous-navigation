@@ -4,6 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import LogInfo
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -16,9 +17,13 @@ def generate_launch_description():
     inverted = LaunchConfiguration('inverted', default='false')
     angle_compensate = LaunchConfiguration('angle_compensate', default='true')
     scan_mode = LaunchConfiguration('scan_mode', default='Sensitivity')
-
-    package_dir = get_package_share_directory('obstacle_detection')
-    params_file = os.path.join(package_dir, 'config', 'obstacle_detector_params.yaml')
+    use_rviz = LaunchConfiguration('use_rviz', default='false')
+    
+    rviz_config_dir = os.path.join(
+            get_package_share_directory('rplidar_ros'),
+            'rviz',
+            'rplidar_ros.rviz')
+    
     
     return LaunchDescription([
 
@@ -55,8 +60,13 @@ def generate_launch_description():
             'scan_mode',
             default_value=scan_mode,
             description='Specifying scan mode of lidar'),
+        
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='false',
+            description='Flag to start RViz'),
 
-
+        # Lidar Driver Node
         Node(
             package='rplidar_ros',
             executable='rplidar_node',
@@ -68,13 +78,28 @@ def generate_launch_description():
                          'inverted': inverted,
                          'angle_compensate': angle_compensate}],
             output='screen'),
-        # Launch your obstacle detector node
+        # Obstacle Detection Node
         Node(
             package='obstacle_detection',
             executable='obstacle_detector',
             name='obstacle_detector',
-            parameters=[params_file],
             output='screen'
+        ),
+        # Rviz
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            arguments=['-d', rviz_config_dir],
+            output='screen',
+            condition=IfCondition(LaunchConfiguration('use_rviz'))
+            ),
+            
+        # Rosbridge Websocket Server
+        Node(
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='rosbridge_websocket',
+            parameters=[{'port': 9090}]
         )
     ])
-
