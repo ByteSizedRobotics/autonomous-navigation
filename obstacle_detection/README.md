@@ -63,8 +63,9 @@ The initial version implements basic obstacle detection using a Lidar sensor.
 
 3. Launch the obstacle detection nodes:
    ```bash
-   ros2 launch obstacle_detection obstacle_detector.launch.py
+   ros2 launch obstacle_detection obstacle_detector.launch.py use_rviz:=true
    ```
+   use_rviz is set to true for development. It is set to false by default.
 
 ### NMEA GPS Driver installation
 
