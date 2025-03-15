@@ -72,7 +72,7 @@ The detector's parameters can be configured in the `config/obstacle_detector_par
 
 ### Expected Output
 When running successfully, you should see output similar to:
-![Obstacle Detection Output](https://github.com/user-attachments/assets/87bf6039-ba21-4f54-9947-c46dac4db427)
+<img width="730" alt="Screenshot 2025-03-15 at 6 04 43 PM" src="https://github.com/user-attachments/assets/d4f53a37-00c1-4f95-b2c6-8332267b2764" />
 
 ## Project Roadmap
 - [x] V0.1: Basic obstacle detection
