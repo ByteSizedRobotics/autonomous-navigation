@@ -83,6 +83,13 @@ def generate_launch_description():
             package='obstacle_detection',
             executable='obstacle_detector',
             name='obstacle_detector',
+            parameters=[{
+                'distance_threshold': 0.35,
+                'corridor_width': 0.25,
+                'corridor_length': 1.0,
+                'forward_direction': 3.14159,
+                'enable_debug_output': False
+            }],
             output='screen'
         ),
         # Rviz

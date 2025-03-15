@@ -1,3 +1,8 @@
+#config file not working, change params in launch file
 obstacle_detector:
   ros__parameters:
-    distance_threshold: 0.25
+    distance_threshold: 0.35      # Detection threshold distance in meters
+    corridor_width: 0.5         # Width of detection corridor in meters
+    corridor_length: 1.0         # Length of detection corridor in meters
+    forward_direction: 3.14159       # Forward direction in radians (0=+x axis, π=backward, π/2=left, -π/2=right)
+    enable_debug_output: false   # Enable/disable detailed debug logging
