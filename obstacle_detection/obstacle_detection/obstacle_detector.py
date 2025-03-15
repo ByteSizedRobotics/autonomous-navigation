@@ -4,6 +4,7 @@ import math
 import numpy as np
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool, Float32
 
 class ObstacleDetector(Node):
     def __init__(self):
@@ -16,12 +17,16 @@ class ObstacleDetector(Node):
             10
         )
         
+        # Publishers
+        self.obstacle_detected_pub = self.create_publisher(Bool, '/obstacle_detected', 10)
+        self.obstacle_distance_pub = self.create_publisher(Float32, '/obstacle_distance', 10)
+        
         # Parameters
-        self.declare_parameter('distance_threshold', 0.15)    # Obstacle detection distance (m)
-        self.declare_parameter('corridor_width', 0.5)        # Width of detection corridor (m)
-        self.declare_parameter('corridor_length', 1.0)       # Length of detection corridor (m)
-        self.declare_parameter('forward_direction', 3.14159)     # Forward direction in radians (0=+x axis)
-        self.declare_parameter('enable_debug_output', False) # Enable detailed debug output
+        self.declare_parameter('distance_threshold', 0.5)    # Obstacle detection distance (m)
+        self.declare_parameter('corridor_width', 1.0)        # Width of detection corridor (m)
+        self.declare_parameter('corridor_length', 3.0)       # Length of detection corridor (m)
+        self.declare_parameter('forward_direction', 0.0)     # Forward direction in radians (0=+x axis)
+        self.declare_parameter('enable_debug_output', True) # Enable detailed debug output
         
     def scan_callback(self, msg: LaserScan):
         # Get parameters
@@ -70,7 +75,16 @@ class ObstacleDetector(Node):
                     if debug:
                         self.get_logger().info(f'Obstacle at ({x:.2f}, {y:.2f}), distance: {distance:.2f}m')
         
+        # Publish obstacle detection results
+        obstacle_msg = Bool()
+        obstacle_msg.data = obstacle_detected
+        self.obstacle_detected_pub.publish(obstacle_msg)
+        
+        # Publish distance if obstacle detected
         if obstacle_detected:
+            distance_msg = Float32()
+            distance_msg.data = float(min_obstacle_distance)
+            self.obstacle_distance_pub.publish(distance_msg)
             self.get_logger().warn(f'Obstacle detected in forward corridor! Distance: {min_obstacle_distance:.2f}m')
         else:
             self.get_logger().info('Forward corridor clear.')

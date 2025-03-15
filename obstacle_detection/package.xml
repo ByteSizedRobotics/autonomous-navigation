@@ -15,10 +15,6 @@
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-  <data_files>
-    <data_file path="config/obstacle_detector_params.yaml"/>
-  </data_files>
-
   <export>
     <build_type>ament_python</build_type>
   </export>
