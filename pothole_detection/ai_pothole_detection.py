@@ -4,13 +4,24 @@ import torch
 import argparse
 import time
 import threading
+import platform
+import pathlib
+from pathlib import Path
 
 last_saved_time = 0
 model = None
 
 def load_model():
     global model
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt')
+    # Check the operating system and set the appropriate path type
+    if platform.system() == 'Windows':
+        pathlib.PosixPath = pathlib.WindowsPath
+    else:
+        pathlib.WindowsPath = pathlib.PosixPath
+    print(cv2.getBuildInformation())
+    # Load the model
+    model_path = str(Path("best.pt"))
+    model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
 
 # PERFORMS LIVE VIDEO INFERENCE
 def live_camera_inference(pathSavedImages):
