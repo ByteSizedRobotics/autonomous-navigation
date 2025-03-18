@@ -30,24 +30,50 @@ def get_key():
 def main(args=None):
     rclpy.init(args=args)
     node = WASDPublisher()
+    toggle = 0
+    speed = 1
 
     try:
         while True:
             key = get_key()
             if key == 'w':
-                command = '{"T":1,"L":0.1,"R":0.1}'
+                command = '{"T":1,"L":%s,"R":%s}' % (0.1 * speed, 0.1 * speed)
                 node.publish_command(command)
             elif key == 'a':
-                command = '{"T":1,"L":-0.25,"R":0.25}'
+                command = '{"T":1,"L":%s,"R":%s}' % (-0.25 * speed, 0.25 * speed)
                 node.publish_command(command)
             elif key == 's':
-                command = '{"T":1,"L":-0.1,"R":-0.1}'
+                command = '{"T":1,"L":%s,"R":%s}' % (-0.1 * speed, -0.1 * speed)
                 node.publish_command(command)
             elif key == 'd':
-                command = '{"T":1,"L":0.25,"R":-0.25}'
+                command = '{"T":1,"L":%s,"R":%s}' % (0.25 * speed, -0.25 * speed)
                 node.publish_command(command)
+            elif key == 'z':
+                if speed == 2:
+                    pass
+                else:
+                    speed += 0.5
+            elif key == 'x':
+                if speed == 1:
+                    pass
+                else:
+                    speed -=0.5            
+            elif key == 'e':
+                if toggle == 0:
+                    toggle = 1
+                    command = '{"T":126}'
+                    node.publish_command(command)
+                    command = '{"T":130}'
+                    node.publish_command(command)
+                elif toggle == 1:
+                    toggle = 0
             elif key == 'q':
                 break
+            if toggle == 1:
+                command = '{"T":126}'
+                node.publish_command(command)
+                command = '{"T":130}'
+                node.publish_command(command)
     except KeyboardInterrupt:
         pass
     finally:
