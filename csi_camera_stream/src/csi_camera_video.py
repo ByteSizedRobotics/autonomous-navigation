@@ -6,9 +6,9 @@ import shlex
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
-class CameraNode:
+class CSIVideoNode:
     def __init__(self):
-        rospy.init_node('camera_node')
+        rospy.init_node('csi_video_node')
         
         # Get parameters
         self.width = rospy.get_param('~width', 640)
@@ -17,7 +17,7 @@ class CameraNode:
         self.camera_frame_id = rospy.get_param('~camera_frame_id', 'camera')
         
         # Create publishers
-        self.image_pub = rospy.Publisher('~image_raw', Image, queue_size=1)
+        self.image_pub = rospy.Publisher('csi_video_stream', Image, queue_size=1)
         self.camera_info_pub = rospy.Publisher('~camera_info', CameraInfo, queue_size=1)
         
         # Create bridge for OpenCV to ROS conversion
@@ -96,7 +96,7 @@ class CameraNode:
 
 if __name__ == '__main__':
     try:
-        node = CameraNode()
+        node = CSIVideoNode()
         node.run()
     except rospy.ROSInterruptException:
         pass
