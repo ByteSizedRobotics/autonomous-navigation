@@ -18,7 +18,7 @@ def load_model():
         pathlib.PosixPath = pathlib.WindowsPath
     else:
         pathlib.WindowsPath = pathlib.PosixPath
-    print(cv2.getBuildInformation())
+    #print(cv2.getBuildInformation())
     # Load the model
     model_path = str(Path("best.pt"))
     model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path)
