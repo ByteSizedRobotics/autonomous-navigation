@@ -49,6 +49,8 @@ The initial version implements basic obstacle detection using a Lidar sensor.
    source install/setup.bash
    ```
 
+## Run batch node
+
 + Once built > python3 batch_run.py
 
 ## Project Roadmap
