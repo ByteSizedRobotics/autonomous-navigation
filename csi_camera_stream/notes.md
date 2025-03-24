@@ -1,0 +1,5 @@
+- Needed to install/build from source opencv with gstreamer enabled
+- followed steps from diverse sources including https://medium.com/@arfanmahmud47/build-opencv-4-from-source-with-gstreamer-ubuntu-zorin-peppermint-c2cff5393ef
+- Once built, need to add the .so built file into the site-packages for the corresponding venv
+- the cam_tests.py shows a template code which was able to open the libcamera video stream for the csi camera
+- for camera to work sometimes need to have it connected then boot the raspi with it connected
