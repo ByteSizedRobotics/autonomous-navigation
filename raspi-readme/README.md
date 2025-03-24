@@ -10,128 +10,33 @@ graphical.target reached after 1min 3.021s in userspace.
 
 The following services and times to boot:
 
-33.717s cloud-init-local.service
-22.225s plymouth-quit-wait.service
-11.039s NetworkManager-wait-online.service
- 5.035s snapd.seeded.service
- 4.704s e2scrub_reap.service
- 4.568s snapd.service
- 4.533s rpi-eeprom-update.service
- 3.285s NetworkManager.service
- 3.065s gnome-remote-desktop.service
- 2.819s udisks2.service
- 2.785s accounts-daemon.service
- 2.208s apport.service
- 1.884s snap.docker.nvidia-container-toolkit.service
- 1.846s power-profiles-daemon.service
- 1.791s polkit.service
- 1.753s ModemManager.service
- 1.680s tailscaled.service
- 1.623s dev-mmcblk0p2.device
- 1.588s avahi-daemon.service
- 1.569s dbus.service
- 1.186s switcheroo-control.service
- 1.032s rsyslog.service
-  996ms cloud-init.service
-  989ms dev-loop16.device
-  989ms dev-loop10.device
-  989ms dev-loop15.device
-  988ms dev-loop14.device
-  988ms dev-loop13.device
-  987ms dev-loop12.device
-  986ms dev-loop11.device
-  986ms systemd-journal-flush.service
-  985ms dev-loop9.device
-  985ms dev-loop8.device
-  985ms dev-loop17.device
-  977ms dev-loop18.device
-  847ms dev-loop1.device
-  801ms packagekit.service
-  639ms apparmor.service
-  630ms cloud-final.service
-  626ms dev-loop0.device
-  626ms dev-loop6.device
-  626ms dev-loop5.device
-  618ms dev-loop4.device
-  617ms dev-loop2.device
-  616ms dev-loop3.device
-  611ms dev-loop7.device
-  605ms systemd-udev-trigger.service
-  575ms systemd-udevd.service
-  528ms cloud-config.service
-  521ms cups.service
-  511ms wpa_supplicant.service
-  462ms user@1002.service
-  451ms systemd-fsck@dev-disk-by\x2dlabel-system\x2dboot.service
-  437ms lm-sensors.service
-  435ms systemd-sysctl.service
-  415ms sysstat.service
-  365ms update-v3d-config.service
-  340ms snap-bare-5.mount
-  319ms systemd-logind.service
-  315ms snap-cheese-42.mount
-  303ms snap-core22-1568.mount
-  296ms upower.service
-  294ms snapd.apparmor.service
-  268ms snap-core22-1752.mount
-  264ms systemd-resolved.service
-  254ms snap-docker-2974.mount
-  247ms snap-docker-3065.mount
-  241ms snap-firefox-4792.mount
-  230ms snap-firefox-5888.mount
-  220ms colord.service
-  219ms snap-gnome\x2d42\x2d2204-178.mount
-  210ms snap-gnome\x2d42\x2d2204-201.mount
-  198ms systemd-tmpfiles-setup.service
-  196ms systemd-tmpfiles-setup-dev-early.service
-  176ms gdm.service
-  174ms systemd-modules-load.service
-  174ms snap-gtk\x2dcommon\x2dthemes-1535.mount
-  152ms keyboard-setup.service
-  149ms plymouth-start.service
-  147ms snap-snap\x2dstore-1219.mount
-  133ms systemd-oomd.service
-  133ms snap-snap\x2dstore-1249.mount
-  112ms systemd-timesyncd.service
-  106ms systemd-rfkill.service
-   96ms systemd-journald.service
-   94ms snap-snapd-23546.mount
-   86ms snap-snapd-23772.mount
-   85ms systemd-random-seed.service
-   75ms systemd-binfmt.service
-   71ms snap-snapd\x2ddesktop\x2dintegration-180.mount
-   70ms kerneloops.service
-   66ms systemd-remount-fs.service
-   65ms snap-snapd\x2ddesktop\x2dintegration-255.mount
-   61ms systemd-timedated.service
-   60ms modprobe@efi_pstore.service
-   59ms modprobe@loop.service
-   59ms dev-hugepages.mount
-   58ms dev-mqueue.mount
-   57ms sys-kernel-debug.mount
-   56ms boot-firmware.mount
-   54ms sys-kernel-tracing.mount
-   44ms swapfile.swap
-   41ms kmod-static-nodes.service
-   41ms modprobe@fuse.service
-   40ms modprobe@configfs.service
-   33ms systemd-user-sessions.service
-   33ms modprobe@drm.service
-   32ms systemd-update-utmp.service
-   30ms snap-thunderbird-632.mount
-   29ms snap-thunderbird-683.mount
-   29ms systemd-update-utmp-runlevel.service
-   28ms console-setup.service
-   26ms rtkit-daemon.service
-   26ms plymouth-read-write.service
-   24ms ufw.service
-   24ms proc-sys-fs-binfmt_misc.mount
-   21ms alsa-restore.service
-   21ms openvpn.service
-   18ms setvtrgb.service
-   18ms sys-kernel-config.mount
-   15ms user-runtime-dir@1002.service
-   13ms systemd-tmpfiles-setup-dev.service
-   10ms modprobe@dm_mod.service
-   9ms snapd.socket
-   7ms sys-fs-fuse-connections.mount
+- 33.717s cloud-init-local.service
+- 22.225s plymouth-quit-wait.service (no need to disable this one bc it just waits for other ones)
+- 11.039s NetworkManager-wait-online.service
+-  5.035s snapd.seeded.service
+-  4.704s e2scrub_reap.service
+-  4.568s snapd.service
+-  4.533s rpi-eeprom-update.service
+-  3.285s NetworkManager.service
+-  3.065s gnome-remote-desktop.service
+-  2.819s udisks2.service
+-  2.785s accounts-daemon.service
+-  2.208s apport.service
+-  1.884s snap.docker.nvidia-container-toolkit.service
+-  1.846s power-profiles-daemon.service
+-  1.791s polkit.service
+-  1.753s ModemManager.service
+-  1.680s tailscaled.service
+-  1.623s dev-mmcblk0p2.device
+-  1.588s avahi-daemon.service
+-  1.569s dbus.service
+-  1.186s switcheroo-control.service
+-  1.032s rsyslog.service
+
+Attempted to remove the following using the commands:
+- cloud-init-local.service: sudo touch /etc/cloud/cloud-init.disabled
+- sudo systemctl disable NetworkManager-wait-online.service
+
+Then sudo systemcl daemon-reexec, sudo reboot
+
+Seemed to reduce time from 1min to 20sec
