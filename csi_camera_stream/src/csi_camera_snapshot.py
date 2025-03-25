@@ -1,4 +1,5 @@
-import rospy
+import rclpy
+from rclpy.node import Node
 import cv2
 import subprocess as sp
 import shlex
@@ -6,19 +7,24 @@ import time
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
-class CSIPictureNode:
+class CSIPictureNode(Node):
     def __init__(self):
-        rospy.init_node('csi_picture_node')
+        super().__init__('csi_picture_node')
         
         # Get parameters
-        self.width = rospy.get_param('~width', 640)
-        self.height = rospy.get_param('~height', 480)
-        self.camera_frame_id = rospy.get_param('~camera_frame_id', 'camera')
-        self.capture_interval = rospy.get_param('~capture_interval', 5.0)  # 5 seconds interval
+        self.declare_parameter('width', 640)
+        self.declare_parameter('height', 480)
+        self.declare_parameter('camera_frame_id', 'camera')
+        self.declare_parameter('capture_interval', 5.0)  # 5 seconds interval
         
-        # Create publishers - only for periodic images
-        self.image_pub = rospy.Publisher('csi_picture', Image, queue_size=1)
-        self.camera_info_pub = rospy.Publisher('~camera_info', CameraInfo, queue_size=1)
+        self.width = self.get_parameter('width').value
+        self.height = self.get_parameter('height').value
+        self.camera_frame_id = self.get_parameter('camera_frame_id').value
+        self.capture_interval = self.get_parameter('capture_interval').value
+        
+        # Create publishers
+        self.image_pub = self.create_publisher(Image, 'csi_picture', 10)
+        self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 10)
         
         # Create bridge for OpenCV to ROS conversion
         self.bridge = CvBridge()
@@ -36,28 +42,14 @@ class CSIPictureNode:
         cy = self.height / 2.0  # Principal point y
         
         self.camera_info_msg.distortion_model = "plumb_bob"
-        self.camera_info_msg.D = [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion
-        self.camera_info_msg.K = [fx, 0, cx, 0, fy, cy, 0, 0, 1]
-        self.camera_info_msg.R = [1, 0, 0, 0, 1, 0, 0, 0, 1]  # Identity
-        self.camera_info_msg.P = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
-
-    def run(self):
-        rospy.loginfo(f"Starting camera node with {self.capture_interval} second interval")
+        self.camera_info_msg.d = [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion
+        self.camera_info_msg.k = [fx, 0, cx, 0, fy, cy, 0, 0, 1]
+        self.camera_info_msg.r = [1, 0, 0, 0, 1, 0, 0, 0, 1]  # Identity
+        self.camera_info_msg.p = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
         
-        rate = rospy.Rate(1.0 / self.capture_interval)  # Rate based on capture interval
-        
-        try:
-            while not rospy.is_shutdown():
-                # Capture a single frame
-                self.capture_and_publish_image()
-                
-                # Sleep for the desired interval
-                rate.sleep()
-                
-        except Exception as e:
-            rospy.logerr(f"Error: {e}")
-        finally:
-            rospy.loginfo("Camera node stopped")
+        # Create timer for image capture
+        self.timer = self.create_timer(self.capture_interval, self.capture_and_publish_image)
+        self.get_logger().info(f"Starting camera node with {self.capture_interval} second interval")
 
     def capture_and_publish_image(self):
         # Command to capture a single image using libcamera
@@ -73,11 +65,11 @@ class CSIPictureNode:
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
             if img is None:
-                rospy.logwarn("Failed to capture image")
+                self.get_logger().warn("Failed to capture image")
                 return
             
             # Create timestamp
-            now = rospy.Time.now()
+            now = self.get_clock().now().to_msg()
             
             # Convert image to ROS message
             img_msg = self.bridge.cv2_to_imgmsg(img, "bgr8")
@@ -91,14 +83,21 @@ class CSIPictureNode:
             self.image_pub.publish(img_msg)
             self.camera_info_pub.publish(self.camera_info_msg)
             
-            rospy.loginfo(f"Image captured and published at {now.to_sec()}")
+            self.get_logger().info(f"Image captured and published at {now.sec}.{now.nanosec}")
             
         except Exception as e:
-            rospy.logerr(f"Error capturing image: {e}")
+            self.get_logger().error(f"Error capturing image: {e}")
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = CSIPictureNode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
-    try:
-        node = CSIPictureNode()
-        node.run()
-    except rospy.ROSInterruptException:
-        pass
+    main()
