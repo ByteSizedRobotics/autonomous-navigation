@@ -29,15 +29,15 @@ def launch_nodes():
     try:
         # Start the appropriate camera node based on selection
         if stream_type == 'standard':
-            camera_node = subprocess.Popen(["rosrun", "your_package", "csi_camera_video.py"])
+            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_video.py"])
             active_processes.append(camera_node)
             rospy.loginfo("CSI Camera Stream started (standard mode)")
         elif stream_type == 'inference':
-            camera_node = subprocess.Popen(["rosrun", "your_package", "csi_camera_inference.py"])
+            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_inference.py"])
             active_processes.append(camera_node)
             rospy.loginfo("CSI Camera Stream with Inference started (inference mode)")
         elif stream_type == 'snapshot':
-            camera_node = subprocess.Popen(["rosrun", "your_package", "csi_camera_snapshot.py"])
+            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_snapshot.py"])
             active_processes.append(camera_node)
             rospy.loginfo("CSI Camera Snapshot started (snapshot mode)")
 
@@ -45,7 +45,7 @@ def launch_nodes():
         webrtc_mode = stream_type if stream_type != 'all' else 'all'
         webrtc_node = subprocess.Popen([
             "rosrun", 
-            "your_package", 
+            "csi_camera_stream", 
             "webrtc_publisher.py",
             f"_mode:={webrtc_mode}"
         ])

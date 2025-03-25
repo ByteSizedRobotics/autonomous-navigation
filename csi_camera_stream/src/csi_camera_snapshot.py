@@ -3,6 +3,7 @@ from rclpy.node import Node
 import cv2
 import subprocess as sp
 import shlex
+import os
 import time
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
@@ -52,8 +53,18 @@ class CSIPictureNode(Node):
         self.get_logger().info(f"Starting camera node with {self.capture_interval} second interval")
 
     def capture_and_publish_image(self):
+
+        # Define the FIFO (named pipe)
+        fifo_path = "/tmp/camera_pipe"
+
+        # Ensure the FIFO does not exist before creating
+        if os.path.exists(fifo_path):
+            os.remove(fifo_path)
+        os.mkfifo(fifo_path)
+
+
         # Command to capture a single image using libcamera
-        cmd = f"libcamera-still --width {self.width} --height {self.height} -n -o -"
+        cmd = f"libcamera-still --width {self.width} --height {self.height} -n -o {fifo_path}"
         
         try:
             # Run the command and capture output

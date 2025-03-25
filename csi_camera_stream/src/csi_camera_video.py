@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import cv2
-import numpy as np
+import os
 import subprocess as sp
 import shlex
 from sensor_msgs.msg import Image, CameraInfo
@@ -51,14 +51,27 @@ class CSIVideoNode(Node):
         self.run()
     
     def run(self):
-        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o -"
-        process = sp.Popen(shlex.split(cmd), stdout=sp.PIPE)
-        cap = cv2.VideoCapture()
-        cap.open(f"pipe:{process.stdout.fileno()}", cv2.CAP_GSTREAMER)
+        # Define the FIFO (named pipe)
+        fifo_path = "/tmp/camera_pipe"
+
+        # Ensure the FIFO does not exist before creating
+        if os.path.exists(fifo_path):
+            os.remove(fifo_path)
+        os.mkfifo(fifo_path)
+
+        # Start libcamera-vid process
+        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path}"
+        process = sp.Popen(shlex.split(cmd))
+
+        # OpenCV Capture from the named pipe
+        cap = cv2.VideoCapture(fifo_path, cv2.CAP_GSTREAMER)
         
         if not cap.isOpened():
-            self.get_logger().error("Failed to open camera pipe")
-            return
+            print("Failed to open camera pipe")
+            process.terminate()
+            process.wait()
+            os.remove(fifo_path)
+            exit(1)
         
         self.get_logger().info("Camera opened successfully using libcamera")
         rate = self.create_rate(self.fps)
