@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pi_camera_webrtc</name>
+  <version>0.0.1</version>
+  <description>ROS 2 package for streaming CSI camera to WebRTC with object detection</description>
+  
+  <maintainer email="bytesizedrobotics0@gmail.com">Admin Byte</maintainer>
+  <license>MIT</license>
+  
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>image_transport</depend>
+  <depend>cv_bridge</depend>
+  <depend>camera_info_manager</depend>
+  
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-pip</exec_depend>
+  
+  <!-- Additional dependencies for YOLOv5 object detection -->
+  <exec_depend>python3-torch</exec_depend>
+  <exec_depend>python3-torchvision</exec_depend>
+  
+  <!-- The WebRTC and YOLOv5 dependencies will need to be installed via pip -->
+  <export>
+    <pip_requirements>
+      aiortc>=1.3.2
+      websockets>=10.0
+      av>=10.0.0
+      torch>=1.8.0
+      torchvision>=0.9.0
+      ultralytics>=8.0.0
+    </pip_requirements>
+  </export>
+</package>

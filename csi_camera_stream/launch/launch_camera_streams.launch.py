@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 import subprocess
-import rospy
+import rclpy
 import argparse
 import signal
 import sys
 
 def signal_handler(sig, frame):
-    rospy.loginfo("Caught interrupt signal, shutting down nodes...")
+    rclpy.loginfo("Caught interrupt signal, shutting down nodes...")
     for process in active_processes:
         if process.poll() is None:  # Check if process is still running
             process.terminate()
@@ -21,7 +21,7 @@ def launch_nodes():
     args = parser.parse_args()
     stream_type = args.stream
     
-    rospy.init_node('launch_nodes', anonymous=True)
+    rclpy.init_node('launch_nodes', anonymous=True)
     
     global active_processes
     active_processes = []
@@ -31,15 +31,15 @@ def launch_nodes():
         if stream_type == 'standard':
             camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_video.py"])
             active_processes.append(camera_node)
-            rospy.loginfo("CSI Camera Stream started (standard mode)")
+            rclpy.loginfo("CSI Camera Stream started (standard mode)")
         elif stream_type == 'inference':
             camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_inference.py"])
             active_processes.append(camera_node)
-            rospy.loginfo("CSI Camera Stream with Inference started (inference mode)")
+            rclpy.loginfo("CSI Camera Stream with Inference started (inference mode)")
         elif stream_type == 'snapshot':
             camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_snapshot.py"])
             active_processes.append(camera_node)
-            rospy.loginfo("CSI Camera Snapshot started (snapshot mode)")
+            rclpy.loginfo("CSI Camera Snapshot started (snapshot mode)")
 
         # Start the WebRTC publisher node with appropriate mode parameter
         webrtc_mode = stream_type if stream_type != 'all' else 'all'
@@ -50,16 +50,16 @@ def launch_nodes():
             f"_mode:={webrtc_mode}"
         ])
         active_processes.append(webrtc_node)
-        rospy.loginfo(f"WebRTC Publisher started in {webrtc_mode} mode")
+        rclpy.loginfo(f"WebRTC Publisher started in {webrtc_mode} mode")
 
         # Register the signal handler for cleanup
         signal.signal(signal.SIGINT, signal_handler)
         
         # Keep script running until ROS shuts down
-        rospy.spin()
+        rclpy.spin()
 
     except Exception as e:
-        rospy.logerr(f"Error launching nodes: {e}")
+        rclpy.logerr(f"Error launching nodes: {e}")
         for process in active_processes:
             if process.poll() is None:  # Check if process is still running
                 process.terminate()
