@@ -2,16 +2,33 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>csi_camera_stream</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="nathan@gawargy.com">adminbyte</maintainer>
+  <version>0.0.1</version>
+  <description>ROS 2 package for streaming camera data using WebRTC and performing object detection with YOLOv5.</description>
+
+  <!-- The maintainer tag contains information about the package maintainer. -->
+  <maintainer email="bytesizedrobotics0@gmail.com">Your Name</maintainer>
+
+  <!-- The license tag specifies the license of the package.-->
   <license>TODO: License declaration</license>
 
+  <!-- Build dependencies -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>aiortc</exec_depend>
+  <exec_depend>opencv</exec_depend>
+  <exec_depend>torch</exec_depend>
+  <exec_depend>av</exec_depend>
+  <exec_depend>websockets</exec_depend>
+
+  <!-- Test dependencies -->
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
+  <!-- Export ament build information -->
   <export>
     <build_type>ament_python</build_type>
   </export>
