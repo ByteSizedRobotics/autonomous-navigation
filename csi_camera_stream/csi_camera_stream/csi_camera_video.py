@@ -1,19 +1,21 @@
 import rclpy
 from rclpy.node import Node
-import cv2
+import sys
 import os
 import subprocess as sp
 import shlex
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
+import cv2
+import time
 
 class CSIVideoNode(Node):
     def __init__(self):
         super().__init__('csi_video_node')
         
         # Get parameters
-        self.declare_parameter('width', 640)
-        self.declare_parameter('height', 480)
+        self.declare_parameter('width', 1640)
+        self.declare_parameter('height', 1232)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
 
@@ -36,15 +38,15 @@ class CSIVideoNode(Node):
         self.camera_info_msg.height = self.height
         
         # Simple camera matrix
-        fx = self.width / 2.0  # Focal length x
-        fy = self.height / 2.0  # Focal length y
-        cx = self.width / 2.0   # Principal point x
-        cy = self.height / 2.0  # Principal point y
+        fx = self.width / 2.0
+        fy = self.height / 2.0
+        cx = self.width / 2.0
+        cy = self.height / 2.0
         
         self.camera_info_msg.distortion_model = "plumb_bob"
-        self.camera_info_msg.d = [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion
+        self.camera_info_msg.d = [0.0, 0.0, 0.0, 0.0, 0.0]
         self.camera_info_msg.k = [fx, 0, cx, 0, fy, cy, 0, 0, 1]
-        self.camera_info_msg.r = [1, 0, 0, 0, 1, 0, 0, 0, 1]  # Identity
+        self.camera_info_msg.r = [1, 0, 0, 0, 1, 0, 0, 0, 1]
         self.camera_info_msg.p = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
         
         # Start camera processing
@@ -59,29 +61,50 @@ class CSIVideoNode(Node):
             os.remove(fifo_path)
         os.mkfifo(fifo_path)
 
-        # Start libcamera-vid process
+        # Start libcamera-vid process with preview
         cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path}"
-        process = sp.Popen(shlex.split(cmd))
+        process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe
         cap = cv2.VideoCapture(fifo_path, cv2.CAP_GSTREAMER)
         
         if not cap.isOpened():
-            print("Failed to open camera pipe")
+            self.get_logger().error("Failed to open camera pipe")
             process.terminate()
             process.wait()
             os.remove(fifo_path)
-            exit(1)
+            return
         
         self.get_logger().info("Camera opened successfully using libcamera")
-        rate = self.create_rate(self.fps)
+        
+        # Debugging: Check video capture properties
+        self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
+        self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
+        self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+        
+        frame_count = 0
+        start_time = time.time()
         
         try:
             while rclpy.ok():
                 ret, frame = cap.read()
                 if not ret:
                     self.get_logger().warn("Failed to capture frame")
+                    time.sleep(0.1)  # Short delay to prevent tight looping
                     continue
+                
+                # Debugging: Add frame count and timestamp to image
+                # cv2.putText(frame, 
+                #            f"Frame: {frame_count} Time: {time.time() - start_time:.2f}s", 
+                #            (10, 30), 
+                #            cv2.FONT_HERSHEY_SIMPLEX, 
+                #            1, 
+                #            (0, 255, 0), 
+                #            2)
+                
+                # Show frame with debugging info
+                # cv2.imshow("Video Stream", frame)
+                # cv2.waitKey(1)  # Small delay to update window
                 
                 now = self.get_clock().now().to_msg()
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
@@ -93,15 +116,21 @@ class CSIVideoNode(Node):
                 self.image_pub.publish(img_msg)
                 self.camera_info_pub.publish(self.camera_info_msg)
                 
-                rate.sleep()
+                frame_count += 1
+                
+                # Optional: Break after certain number of frames for testing
+                # if frame_count > 300:
+                #     break
+        
         except Exception as e:
             self.get_logger().error(f"Error: {e}")
         finally:
             cap.release()
             process.terminate()
             process.wait()
+            cv2.destroyAllWindows()
+            self.get_logger().info(f"Captured {frame_count} frames")
             self.get_logger().info("Camera node stopped")
-
 
 def main(args=None):
     rclpy.init(args=args)

@@ -22,6 +22,8 @@ setup(
     license='Apache License 2.0',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [],
+        'console_scripts': ['csi_camera_video = csi_camera_stream.csi_camera_video:main',
+                 'webRTC_publisher = csi_camera_stream.webRTC_publisher:main'],
+
     },
 )

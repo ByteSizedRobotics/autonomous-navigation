@@ -1,15 +1,20 @@
 import rclpy
-import cv2
+import sys
 import numpy as np
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+
+sys.path.insert(0, "/home/adminbyte/venv/lib/python3.12/site-packages")
 from aiortc import RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
 import av
 import asyncio
 import json
 import websockets
 import time
+
+sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
+import cv2
 
 class WebRTCPublisherNode(Node):
     def __init__(self):
