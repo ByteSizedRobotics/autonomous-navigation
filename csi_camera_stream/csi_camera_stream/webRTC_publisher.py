@@ -122,8 +122,12 @@ class WebRTCPublisherNode(Node):
     async def handle_offer(self, websocket, path=None):
         try:
             async for message in websocket:
+                self.get_logger().info(f"Received WebRTC message: {message}")  # Log incoming messages
+
                 data = json.loads(message)
                 if data.get("type") == "offer":
+                    self.get_logger().info("WebRTC offer received, processing...")
+
                     # Close any existing peer connection
                     if self.pc:
                         await self.pc.close()
@@ -134,6 +138,7 @@ class WebRTCPublisherNode(Node):
                     @self.pc.on("icecandidate")
                     async def on_ice_candidate(event):
                         if event.candidate:
+                            self.get_logger().info(f"Sending ICE candidate: {event.candidate.candidate}")
                             await websocket.send(json.dumps({
                                 "type": "ice-candidate", 
                                 "candidate": event.candidate.candidate
@@ -148,6 +153,7 @@ class WebRTCPublisherNode(Node):
                     answer = await self.pc.createAnswer()
                     await self.pc.setLocalDescription(answer)
                     
+                    self.get_logger().info("Sending WebRTC answer")
                     await websocket.send(json.dumps({
                         "type": "answer", 
                         "sdp": self.pc.localDescription.sdp
