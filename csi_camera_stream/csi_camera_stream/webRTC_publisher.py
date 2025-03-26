@@ -42,33 +42,34 @@ class WebRTCPublisherNode(Node):
         
         self.pc = None  # WebRTC peer connection
         
-        self._setup_subscriptions()
         self.get_logger().info(f"WebRTC publisher started in '{self.mode}' mode")
+        self.subcription = self.create_subscription(Image, self.video_topic, self.video_callback, 100)
+        self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
         
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(self.start_webrtc_server())
 
-    def _setup_subscriptions(self):
-        if hasattr(self, '_subscriptions'):
-            for sub in self._subscriptions:
-                self.destroy_subscription(sub)
-        self._subscriptions = []
+    # def _setup_subscriptions(self):
+    #     if hasattr(self, '_subscriptions'):
+    #         for sub in self._subscriptions:
+    #             self.destroy_subscription(sub)
+    #     self._subscriptions = []
         
-        if self.mode in ["video"]:
-            sub = self.create_subscription(Image, self.video_topic, self.video_callback, 10)
-            self._subscriptions.append(sub)
-            self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
+    #     if self.mode in ["video"]:
+    #         sub = self.create_subscription(Image, self.video_topic, self.video_callback, 10)
+    #         self._subscriptions.append(sub)
+    #         self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
         
-        if self.mode in ["still"]:
-            sub = self.create_subscription(Image, self.still_topic, self.still_callback, 10)
-            self._subscriptions.append(sub)
-            self.get_logger().info(f"Subscribed to still image topic: {self.still_topic}")
+    #     if self.mode in ["still"]:
+    #         sub = self.create_subscription(Image, self.still_topic, self.still_callback, 10)
+    #         self._subscriptions.append(sub)
+    #         self.get_logger().info(f"Subscribed to still image topic: {self.still_topic}")
         
-        if self.mode in ["inference"]:
-            sub = self.create_subscription(Image, self.inference_topic, self.inference_callback, 10)
-            self._subscriptions.append(sub)
-            self.get_logger().info(f"Subscribed to inference topic: {self.inference_topic}")
+    #     if self.mode in ["inference"]:
+    #         sub = self.create_subscription(Image, self.inference_topic, self.inference_callback, 10)
+    #         self._subscriptions.append(sub)
+    #         self.get_logger().info(f"Subscribed to inference topic: {self.inference_topic}")
 
     def video_callback(self, msg):
         self.get_logger().info("Inside video callback")  # Debug log
@@ -100,10 +101,7 @@ class WebRTCPublisherNode(Node):
             self.get_logger().error(f"Failed to convert inference frame: {e}")
 
     def get_current_frame(self):
-        self.get_logger().info(f"🔍 Checking current frame in mode: {self.mode}")
-
         if self.mode == "video":
-            self.get_logger().info(f"Got here")
             frame = self.current_frame
         elif self.mode == "still":
             frame = self.last_still_frame
@@ -113,9 +111,9 @@ class WebRTCPublisherNode(Node):
             frame = None
 
         if frame is None:
-            self.get_logger().warning("⚠️ No valid frame found, returning black frame.")
+            self.get_logger().warning("No valid frame found, returning black frame.")
         else:
-            self.get_logger().info(f"✅ Frame found: {frame.shape}, dtype={frame.dtype}")
+            self.get_logger().info(f"Frame found: {frame.shape}, dtype={frame.dtype}")
 
         return frame
 
