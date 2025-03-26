@@ -119,7 +119,7 @@ class WebRTCPublisherNode(Node):
             video_frame.time_base = time_base
             return video_frame
 
-    async def handle_offer(self, websocket, path):
+    async def handle_offer(self, websocket, path=None):
         async for message in websocket:
             data = json.loads(message)
             if data.get("type") == "offer":
