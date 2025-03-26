@@ -119,44 +119,44 @@ class WebRTCPublisherNode(Node):
             video_frame.time_base = time_base
             return video_frame
 
-        async def handle_offer(self, websocket, path=None):
-            try:
-                async for message in websocket:
-                    data = json.loads(message)
-                    if data.get("type") == "offer":
-                        # Close any existing peer connection
-                        if self.pc:
-                            await self.pc.close()
-                        
-                        self.pc = RTCPeerConnection()
-                        
-                        # Add ICE candidate handling
-                        @self.pc.on("icecandidate")
-                        async def on_ice_candidate(event):
-                            if event.candidate:
-                                await websocket.send(json.dumps({
-                                    "type": "ice-candidate", 
-                                    "candidate": event.candidate.candidate
-                                }))
-                        
-                        offer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
-                        await self.pc.setRemoteDescription(offer)
-                        
-                        video_track = self.ROSVideoTrack(self)
-                        self.pc.addTrack(video_track)
-                        
-                        answer = await self.pc.createAnswer()
-                        await self.pc.setLocalDescription(answer)
-                        
-                        await websocket.send(json.dumps({
-                            "type": "answer", 
-                            "sdp": self.pc.localDescription.sdp
-                        }))
-            except Exception as e:
-                self.get_logger().error(f"WebRTC signaling error: {e}")
-            finally:
-                if self.pc:
-                    await self.pc.close()
+    async def handle_offer(self, websocket, path=None):
+        try:
+            async for message in websocket:
+                data = json.loads(message)
+                if data.get("type") == "offer":
+                    # Close any existing peer connection
+                    if self.pc:
+                        await self.pc.close()
+                    
+                    self.pc = RTCPeerConnection()
+                    
+                    # Add ICE candidate handling
+                    @self.pc.on("icecandidate")
+                    async def on_ice_candidate(event):
+                        if event.candidate:
+                            await websocket.send(json.dumps({
+                                "type": "ice-candidate", 
+                                "candidate": event.candidate.candidate
+                            }))
+                    
+                    offer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+                    await self.pc.setRemoteDescription(offer)
+                    
+                    video_track = self.ROSVideoTrack(self)
+                    self.pc.addTrack(video_track)
+                    
+                    answer = await self.pc.createAnswer()
+                    await self.pc.setLocalDescription(answer)
+                    
+                    await websocket.send(json.dumps({
+                        "type": "answer", 
+                        "sdp": self.pc.localDescription.sdp
+                    }))
+        except Exception as e:
+            self.get_logger().error(f"WebRTC signaling error: {e}")
+        finally:
+            if self.pc:
+                await self.pc.close()
 
     async def start_webrtc_server(self):
         server = await websockets.serve(self.handle_offer, "0.0.0.0", 8765)
