@@ -71,6 +71,8 @@ class WebRTCPublisherNode(Node):
             self.get_logger().info(f"Subscribed to inference topic: {self.inference_topic}")
 
     def video_callback(self, msg):
+        self.get_logger().info("Inside video callback")  # Debug log
+
         try:
             self.get_logger().info("Received image message")  # Debug log
 
@@ -101,6 +103,7 @@ class WebRTCPublisherNode(Node):
         self.get_logger().info(f"🔍 Checking current frame in mode: {self.mode}")
 
         if self.mode == "video":
+            self.get_logger().info(f"Got here")
             frame = self.current_frame
         elif self.mode == "still":
             frame = self.last_still_frame
