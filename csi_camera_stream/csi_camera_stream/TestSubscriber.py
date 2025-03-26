@@ -1,6 +1,10 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import sys
+sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
+import cv2
 
 class TestSubscriber(Node):
     def __init__(self):
@@ -14,8 +18,12 @@ class TestSubscriber(Node):
         self.get_logger().info("Subscribed to csi_video_stream")
 
     def callback(self, msg):
-        self.get_logger().info("Received a message")
-
+        # self.get_logger().info("Received a message")
+        bridge = CvBridge()
+        frame = bridge.imgmsg_to_cv2(msg, "bgr8")
+        cv2.imshow("frames", frame)
+        cv2.waitKey(1)  # <- This is necessary to update the OpenCV window
+        
 def main(args=None):
     rclpy.init(args=args)
     node = TestSubscriber()
