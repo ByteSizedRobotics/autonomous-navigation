@@ -58,9 +58,6 @@ class WebRTCPublisherNode(Node):
 
             self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 
-            cv2.imshow("Video", self.current_frame)
-            cv2.waitKey(1)
-
             if self.current_frame is not None:
                 self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
             else:
@@ -85,7 +82,6 @@ class WebRTCPublisherNode(Node):
     def get_current_frame(self):
         if self.mode == "video":
             frame = self.current_frame
-            self.get_logger().info(f"Frame size: {frame.shape}")  # Should show (height, width, 3)
         elif self.mode == "still":
             frame = self.last_still_frame
         elif self.mode == "inference":
