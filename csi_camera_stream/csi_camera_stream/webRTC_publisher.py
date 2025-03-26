@@ -43,7 +43,7 @@ class WebRTCPublisherNode(Node):
         self.pc = None  # WebRTC peer connection
         
         self.get_logger().info(f"WebRTC publisher started in '{self.mode}' mode")
-        self.subcription = self.create_subscription(Image, self.video_topic, self.video_callback, 100)
+        self.subcription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
         self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
         
         self.loop = asyncio.new_event_loop()
@@ -53,14 +53,15 @@ class WebRTCPublisherNode(Node):
     def video_callback(self, msg):
         self.get_logger().info("Received image message")  # Debug log
 
-        self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        # self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 
-        cv2.imshow("self frames", self.current_frame)
-        cv2.waitKey(1)
+        # cv2.imshow("self frames", self.current_frame)
+        # cv2.waitKey(1)
 
-        currentFrame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-        cv2.imshow("frames without self", currentFrame)
-        cv2.waitKey(1)
+        bridge = CvBridge()
+        frame = bridge.imgmsg_to_cv2(msg, "bgr8")
+        cv2.imshow("frames", frame)
+        cv2.waitKey(1)  # <- This is necessary to update the OpenCV window
 
         if self.current_frame is not None:
             self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
