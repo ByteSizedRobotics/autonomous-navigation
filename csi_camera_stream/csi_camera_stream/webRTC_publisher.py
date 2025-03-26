@@ -21,10 +21,10 @@ class WebRTCPublisherNode(Node):
         super().__init__("webrtc_publisher")
         
         # Parameters
-        self.declare_parameter("mode", "video")  # Options: "video", "still", "inference"
-        self.declare_parameter("still_interval", 5.0)  # seconds
-        self.declare_parameter("video_topic", "raw_video_stream")
-        self.declare_parameter("still_topic", "csi_picture")
+        self.declare_parameter("mode", "video")  # TODO: choose between Options: "video", "still", "inference"
+        self.declare_parameter("still_interval", 5.0)  # seconds for pictures
+        self.declare_parameter("video_topic", "csi_video_stream") # video stream topic
+        self.declare_parameter("still_topic", "csi_picture") # TODO: need to update these topics with actual name
         self.declare_parameter("inference_topic", "detected_pothole_frames")
 
         self.mode = self.get_parameter("mode").value
@@ -55,17 +55,17 @@ class WebRTCPublisherNode(Node):
                 self.destroy_subscription(sub)
         self._subscriptions = []
         
-        if self.mode in ["video", "all"]:
+        if self.mode in ["video"]:
             sub = self.create_subscription(Image, self.video_topic, self.video_callback, 10)
             self._subscriptions.append(sub)
             self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
         
-        if self.mode in ["still", "all"]:
+        if self.mode in ["still"]:
             sub = self.create_subscription(Image, self.still_topic, self.still_callback, 10)
             self._subscriptions.append(sub)
             self.get_logger().info(f"Subscribed to still image topic: {self.still_topic}")
         
-        if self.mode in ["inference", "all"]:
+        if self.mode in ["inference"]:
             sub = self.create_subscription(Image, self.inference_topic, self.inference_callback, 10)
             self._subscriptions.append(sub)
             self.get_logger().info(f"Subscribed to inference topic: {self.inference_topic}")
@@ -91,19 +91,23 @@ class WebRTCPublisherNode(Node):
             self.get_logger().error(f"Failed to convert inference frame: {e}")
 
     def get_current_frame(self):
+        self.get_logger().info(f"🔍 Checking current frame in mode: {self.mode}")
+
         if self.mode == "video":
-            return self.current_frame
+            frame = self.current_frame
         elif self.mode == "still":
-            return self.last_still_frame
+            frame = self.last_still_frame
         elif self.mode == "inference":
-            return self.last_inference_frame
-        elif self.mode == "all":
-            if self.last_inference_frame and time.time() - self.last_inference_time < 1.0:
-                return self.last_inference_frame
-            elif self.last_still_frame and time.time() - self.last_still_time < 1.0:
-                return self.last_still_frame
-            return self.current_frame
-        return None
+            frame = self.last_inference_frame
+        else:
+            frame = None
+
+        if frame is None:
+            self.get_logger().warning("⚠️ No valid frame found, returning black frame.")
+        else:
+            self.get_logger().info(f"✅ Frame found: {frame.shape}, dtype={frame.dtype}")
+
+        return frame
 
     class ROSVideoTrack(VideoStreamTrack):
         def __init__(self, publisher_node):
