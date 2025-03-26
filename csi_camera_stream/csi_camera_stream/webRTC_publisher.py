@@ -50,27 +50,6 @@ class WebRTCPublisherNode(Node):
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(self.start_webrtc_server())
 
-    # def _setup_subscriptions(self):
-    #     if hasattr(self, '_subscriptions'):
-    #         for sub in self._subscriptions:
-    #             self.destroy_subscription(sub)
-    #     self._subscriptions = []
-        
-    #     if self.mode in ["video"]:
-    #         sub = self.create_subscription(Image, self.video_topic, self.video_callback, 10)
-    #         self._subscriptions.append(sub)
-    #         self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
-        
-    #     if self.mode in ["still"]:
-    #         sub = self.create_subscription(Image, self.still_topic, self.still_callback, 10)
-    #         self._subscriptions.append(sub)
-    #         self.get_logger().info(f"Subscribed to still image topic: {self.still_topic}")
-        
-    #     if self.mode in ["inference"]:
-    #         sub = self.create_subscription(Image, self.inference_topic, self.inference_callback, 10)
-    #         self._subscriptions.append(sub)
-    #         self.get_logger().info(f"Subscribed to inference topic: {self.inference_topic}")
-
     def video_callback(self, msg):
         self.get_logger().info("Inside video callback")  # Debug log
 
@@ -79,6 +58,9 @@ class WebRTCPublisherNode(Node):
 
             self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 
+            cv2.imshow("Video", self.current_frame)
+            cv2.waitKey(1)
+
             if self.current_frame is not None:
                 self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
             else:
@@ -86,23 +68,24 @@ class WebRTCPublisherNode(Node):
         except Exception as e:
             self.get_logger().error(f"Failed to convert video frame: {e}")
 
-    def still_callback(self, msg):
-        try:
-            self.last_still_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            self.last_still_time = time.time()
-        except Exception as e:
-            self.get_logger().error(f"Failed to convert still image: {e}")
+    # def still_callback(self, msg):
+    #     try:
+    #         self.last_still_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+    #         self.last_still_time = time.time()
+    #     except Exception as e:
+    #         self.get_logger().error(f"Failed to convert still image: {e}")
 
-    def inference_callback(self, msg):
-        try:
-            self.last_inference_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-            self.last_inference_time = time.time()
-        except Exception as e:
-            self.get_logger().error(f"Failed to convert inference frame: {e}")
+    # def inference_callback(self, msg):
+    #     try:
+    #         self.last_inference_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+    #         self.last_inference_time = time.time()
+    #     except Exception as e:
+    #         self.get_logger().error(f"Failed to convert inference frame: {e}")
 
     def get_current_frame(self):
         if self.mode == "video":
             frame = self.current_frame
+            self.get_logger().info(f"Frame size: {frame.shape}")  # Should show (height, width, 3)
         elif self.mode == "still":
             frame = self.last_still_frame
         elif self.mode == "inference":
@@ -110,10 +93,10 @@ class WebRTCPublisherNode(Node):
         else:
             frame = None
 
-        if frame is None:
-            self.get_logger().warning("No valid frame found, returning black frame.")
-        else:
-            self.get_logger().info(f"Frame found: {frame.shape}, dtype={frame.dtype}")
+        # if frame is None:
+        #     self.get_logger().warning("No valid frame found, returning black frame.")
+        # else:
+        #     self.get_logger().info(f"Frame found: {frame.shape}, dtype={frame.dtype}")
 
         return frame
 
