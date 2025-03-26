@@ -4,6 +4,7 @@ import numpy as np
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+import threading
 
 sys.path.insert(0, "/home/adminbyte/venv/lib/python3.12/site-packages")
 from aiortc import RTCPeerConnection, VideoStreamTrack, RTCSessionDescription
@@ -46,27 +47,26 @@ class WebRTCPublisherNode(Node):
         self.subcription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
         self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
         
+        # Start WebRTC in a separate thread
         self.loop = asyncio.new_event_loop()
+        threading.Thread(target=self.run_webrtc_server, daemon=True).start()
+    
+    def run_webrtc_server(self):
         asyncio.set_event_loop(self.loop)
         self.loop.run_until_complete(self.start_webrtc_server())
-
+    
     def video_callback(self, msg):
-        self.get_logger().info("Received image message")  # Debug log
-
-        # self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-
-        # cv2.imshow("self frames", self.current_frame)
+        self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        
+        # display received camera stream with opencv
+        # small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
+        # cv2.imshow("Self Frames", small_frame)
         # cv2.waitKey(1)
 
-        bridge = CvBridge()
-        frame = bridge.imgmsg_to_cv2(msg, "bgr8")
-        cv2.imshow("frames", frame)
-        cv2.waitKey(1)  # <- This is necessary to update the OpenCV window
-
-        if self.current_frame is not None:
-            self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
-        else:
-            self.get_logger().warn("Converted frame is None")
+        #if self.current_frame is not None:
+        #    self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
+        #else:
+        #    self.get_logger().warn("Converted frame is None")
 
 
     # def still_callback(self, msg):
@@ -93,18 +93,13 @@ class WebRTCPublisherNode(Node):
         else:
             frame = None
 
-        # if frame is None:
-        #     self.get_logger().warning("No valid frame found, returning black frame.")
-        # else:
-        #     self.get_logger().info(f"Frame found: {frame.shape}, dtype={frame.dtype}")
-
         return frame
 
     class ROSVideoTrack(VideoStreamTrack):
         def __init__(self, publisher_node):
             super().__init__()
             self.publisher_node = publisher_node
-            self.default_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+            self.default_frame = np.zeros((1232, 1640, 3), dtype=np.uint8)
         
         async def recv(self):
             frame_data = self.publisher_node.get_current_frame()

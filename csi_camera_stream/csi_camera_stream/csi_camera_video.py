@@ -64,7 +64,7 @@ class CSIVideoNode(Node):
         os.mkfifo(fifo_path)
 
         # Start libcamera-vid process without preview (remove --nopreview to see camera stream)
-        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path}"
+        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path} --nopreview"
         process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe

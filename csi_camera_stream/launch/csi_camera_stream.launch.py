@@ -31,18 +31,10 @@ def generate_launch_description():
         name='webRTC_publisher',
     )
 
-    #TESTING
-    test_subscriber = launch_ros.actions.Node(
-        package='csi_camera_stream',
-        executable='TestSubscriber',
-        name='TestSubscriber',
-    )
-
     # Construct the launch description
     ld = launch.LaunchDescription([
         camera_node,
-        webrtc_node,
-        test_subscriber
+        webrtc_node
     ])
 
     return ld
