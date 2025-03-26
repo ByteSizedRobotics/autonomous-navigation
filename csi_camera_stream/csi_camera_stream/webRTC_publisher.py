@@ -51,19 +51,22 @@ class WebRTCPublisherNode(Node):
         self.loop.run_until_complete(self.start_webrtc_server())
 
     def video_callback(self, msg):
-        self.get_logger().info("Inside video callback")  # Debug log
+        self.get_logger().info("Received image message")  # Debug log
 
-        try:
-            self.get_logger().info("Received image message")  # Debug log
+        self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
 
-            self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        cv2.imshow("self frames", self.current_frame)
+        cv2.waitKey(1)
 
-            if self.current_frame is not None:
-                self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
-            else:
-                self.get_logger().warn("Converted frame is None")
-        except Exception as e:
-            self.get_logger().error(f"Failed to convert video frame: {e}")
+        currentFrame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        cv2.imshow("frames without self", currentFrame)
+        cv2.waitKey(1)
+
+        if self.current_frame is not None:
+            self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
+        else:
+            self.get_logger().warn("Converted frame is None")
+
 
     # def still_callback(self, msg):
     #     try:
