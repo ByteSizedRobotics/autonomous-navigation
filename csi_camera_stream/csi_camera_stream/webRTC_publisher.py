@@ -72,7 +72,14 @@ class WebRTCPublisherNode(Node):
 
     def video_callback(self, msg):
         try:
+            self.get_logger().info("Received image message")  # Debug log
+
             self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            if self.current_frame is not None:
+                self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
+            else:
+                self.get_logger().warn("Converted frame is None")
         except Exception as e:
             self.get_logger().error(f"Failed to convert video frame: {e}")
 
