@@ -6,6 +6,8 @@ import subprocess as sp
 import shlex
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
+
+sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
 import cv2
 import time
 
@@ -61,12 +63,12 @@ class CSIVideoNode(Node):
             os.remove(fifo_path)
         os.mkfifo(fifo_path)
 
-        # Start libcamera-vid process with preview
+        # Start libcamera-vid process without preview (remove --nopreview to see camera stream)
         cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path}"
         process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe
-        cap = cv2.VideoCapture(fifo_path, cv2.CAP_GSTREAMER)
+        cap = cv2.VideoCapture(fifo_path)
         
         if not cap.isOpened():
             self.get_logger().error("Failed to open camera pipe")
