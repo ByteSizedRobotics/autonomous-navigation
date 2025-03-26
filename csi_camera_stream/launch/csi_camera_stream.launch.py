@@ -1,69 +1,69 @@
 #!/usr/bin/env python3
-import subprocess
-import rclpy
+import os
 import argparse
-import signal
-import sys
+import launch
+import launch_ros.actions
+from launch.actions import ExecuteProcess, RegisterEventHandler
+from launch.event_handlers import OnProcessExit
+from launch.substitutions import LaunchConfiguration
 
-def signal_handler(sig, frame):
-    rclpy.loginfo("Caught interrupt signal, shutting down nodes...")
-    for process in active_processes:
-        if process.poll() is None:  # Check if process is still running
-            process.terminate()
-    sys.exit(0)
+def generate_launch_description():
+    # Create an argument for stream type
+    stream_type_arg = LaunchConfiguration('stream', default='standard')
+    
+    # Define the stream type argument
+    stream_type_launch_arg = launch.actions.DeclareLaunchArgument(
+        'stream',
+        default_value='standard',
+        choices=['video', 'inference', 'snapshot', 'all'],
+        description='Camera stream type to use'
+    )
 
-def launch_nodes():
-    parser = argparse.ArgumentParser(description='Launch ROS nodes with configurable camera stream')
+    # Camera node selection based on stream type
+    camera_node_map = {
+        'standard': 'csi_camera_video',
+        'inference': 'csi_camera_inferenc',
+        'snapshot': 'csi_camera_snapshot'
+    }
+
+    # Select the appropriate camera node
+    camera_node_name = camera_node_map.get(stream_type_arg.var_name, 'csi_camera_video')
+
+    # Camera node launch action
+    camera_node = launch_ros.actions.Node(
+        package='csi_camera_stream',
+        executable=camera_node_name,
+        name='csi_camera_node',
+        parameters=[{'stream_type': stream_type_arg}]
+    )
+
+    # WebRTC publisher node launch action
+    webrtc_node = launch_ros.actions.Node(
+        package='csi_camera_stream',
+        executable='webrtc_publisher_node',
+        name='webrtc_publisher',
+        parameters=[{'mode': stream_type_arg}]
+    )
+
+    # Construct the launch description
+    ld = launch.LaunchDescription([
+        stream_type_launch_arg,
+        camera_node,
+        webrtc_node
+    ])
+
+    return ld
+
+def main():
+    # This allows the launch file to be run directly
+    parser = argparse.ArgumentParser(description='Launch ROS2 CSI Camera Nodes')
     parser.add_argument('--stream', type=str, default='standard',
-                      choices=['video', 'inference', 'snapshot', 'all'],
-                      help='Camera stream type to use (standard, inference, snapshot, or all)')
-    
+                        choices=['video', 'inference', 'snapshot', 'all'],
+                        help='Camera stream type to use')
     args = parser.parse_args()
-    stream_type = args.stream
-    
-    rclpy.init_node('launch_nodes', anonymous=True)
-    
-    global active_processes
-    active_processes = []
 
-    try:
-        # Start the appropriate camera node based on selection
-        if stream_type == 'standard':
-            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_video.py"])
-            active_processes.append(camera_node)
-            rclpy.loginfo("CSI Camera Stream started (standard mode)")
-        elif stream_type == 'inference':
-            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_inference.py"])
-            active_processes.append(camera_node)
-            rclpy.loginfo("CSI Camera Stream with Inference started (inference mode)")
-        elif stream_type == 'snapshot':
-            camera_node = subprocess.Popen(["rosrun", "csi_camera_stream", "csi_camera_snapshot.py"])
-            active_processes.append(camera_node)
-            rclpy.loginfo("CSI Camera Snapshot started (snapshot mode)")
+    # Launch the nodes
+    launch.main(launch_description_factory=generate_launch_description)
 
-        # Start the WebRTC publisher node with appropriate mode parameter
-        webrtc_mode = stream_type if stream_type != 'all' else 'all'
-        webrtc_node = subprocess.Popen([
-            "rosrun", 
-            "csi_camera_stream", 
-            "webrtc_publisher.py",
-            f"_mode:={webrtc_mode}"
-        ])
-        active_processes.append(webrtc_node)
-        rclpy.loginfo(f"WebRTC Publisher started in {webrtc_mode} mode")
-
-        # Register the signal handler for cleanup
-        signal.signal(signal.SIGINT, signal_handler)
-        
-        # Keep script running until ROS shuts down
-        rclpy.spin()
-
-    except Exception as e:
-        rclpy.logerr(f"Error launching nodes: {e}")
-        for process in active_processes:
-            if process.poll() is None:  # Check if process is still running
-                process.terminate()
-
-if __name__ == "__main__":
-    active_processes = []
-    launch_nodes()
+if __name__ == '__main__':
+    main()
