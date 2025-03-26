@@ -23,7 +23,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': ['csi_camera_video = csi_camera_stream.csi_camera_video:main',
-                 'webRTC_publisher = csi_camera_stream.webRTC_publisher:main'],
+                 'webRTC_publisher = csi_camera_stream.webRTC_publisher:main',
+                 'TestSubscriber = csi_camera_stream.TestSubscriber:main'],
 
     },
 )

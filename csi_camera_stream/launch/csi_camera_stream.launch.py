@@ -41,7 +41,8 @@ def generate_launch_description():
     # Construct the launch description
     ld = launch.LaunchDescription([
         camera_node,
-        webrtc_node
+        webrtc_node,
+        test_subscriber
     ])
 
     return ld
