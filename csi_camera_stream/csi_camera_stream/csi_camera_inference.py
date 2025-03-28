@@ -6,6 +6,7 @@ import subprocess as sp
 import shlex
 import platform
 import pathlib
+from pathlib import Path
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge
 
@@ -58,6 +59,15 @@ class CSIVideoNode(Node):
         
         # Load YOLOv5 model
         self.model = None
+
+        if platform.system() == 'Windows':
+            pathlib.PosixPath = pathlib.WindowsPath
+        else:
+            pathlib.WindowsPath = pathlib.PosixPath
+            
+        self.model_path = str(Path("best.pt"))
+        # self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
+
         self.load_model()
 
         # Start camera processing
@@ -65,11 +75,8 @@ class CSIVideoNode(Node):
     
     def load_model(self):
         try:
-            if platform.system() == 'Windows':
-                pathlib.PosixPath = pathlib.WindowsPath
-            else:
-                pathlib.WindowsPath = pathlib.PosixPath
-            
+
+
             self.get_logger().info(f"Loading YOLOv5 model from {self.model_path}")
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
             self.get_logger().info("YOLOv5 model loaded successfully")
