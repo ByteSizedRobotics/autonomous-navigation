@@ -108,7 +108,7 @@ def generate_launch_description():
 
         # Motor Control Node
         Node(
-            package='wave_rover_serial_control',
+            package='potrider',
             executable='serial_motor_node',
             name='serial_motor_node',
         ),
