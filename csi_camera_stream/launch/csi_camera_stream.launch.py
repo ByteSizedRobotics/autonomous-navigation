@@ -15,7 +15,7 @@ def generate_launch_description():
     # 'inference': 'csi_camera_inference',
     # 'snapshot': 'csi_camera_snapshot'
 
-    camera_node_name = 'csi_camera_video'
+    camera_node_name = 'csi_camera_inference'
 
     # Camera node launch action
     camera_node = launch_ros.actions.Node(
