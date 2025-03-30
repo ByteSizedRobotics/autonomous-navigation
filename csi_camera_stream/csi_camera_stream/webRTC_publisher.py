@@ -23,23 +23,23 @@ class WebRTCPublisherNode(Node):
         
         # Parameters
         self.declare_parameter("mode", "video")  # TODO: choose between Options: "video", "still", "inference"
-        self.declare_parameter("still_interval", 5.0)  # seconds for pictures
+        # self.declare_parameter("still_interval", 5.0)  # seconds for pictures
         self.declare_parameter("video_topic", "csi_video_stream") # video stream topic
-        self.declare_parameter("still_topic", "csi_picture") # TODO: need to update these topics with actual name
-        self.declare_parameter("inference_topic", "detected_pothole_frames")
+        # self.declare_parameter("still_topic", "csi_picture") # TODO: need to update these topics with actual name
+        # self.declare_parameter("inference_topic", "detected_pothole_frames")
 
         self.mode = self.get_parameter("mode").value
-        self.still_interval = self.get_parameter("still_interval").value
+        #self.still_interval = self.get_parameter("still_interval").value
         self.video_topic = self.get_parameter("video_topic").value
-        self.still_topic = self.get_parameter("still_topic").value
-        self.inference_topic = self.get_parameter("inference_topic").value
+        #self.still_topic = self.get_parameter("still_topic").value
+        #self.inference_topic = self.get_parameter("inference_topic").value
 
         self.bridge = CvBridge()
         self.current_frame = None
-        self.last_still_frame = None
-        self.last_inference_frame = None
-        self.last_still_time = 0
-        self.last_inference_time = 0
+        #self.last_still_frame = None
+        #self.last_inference_frame = None
+        #self.last_still_time = 0
+        #self.last_inference_time = 0
         
         self.pc = None  # WebRTC peer connection
         
@@ -59,9 +59,9 @@ class WebRTCPublisherNode(Node):
         self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         
         # display received camera stream with opencv
-        # small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
-        # cv2.imshow("Self Frames", small_frame)
-        # cv2.waitKey(1)
+        small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
+        cv2.imshow("Self Frames", small_frame)
+        cv2.waitKey(1)
 
         #if self.current_frame is not None:
         #    self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)

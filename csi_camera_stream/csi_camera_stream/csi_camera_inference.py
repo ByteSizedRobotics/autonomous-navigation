@@ -65,8 +65,8 @@ class CSIVideoNode(Node):
         else:
             pathlib.WindowsPath = pathlib.PosixPath
             
-        self.model_path = str(Path("best.pt"))
-        # self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
+        #self.model_path = str(Path("best.pt"))
+        self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
 
         self.load_model()
 
@@ -78,7 +78,7 @@ class CSIVideoNode(Node):
 
 
             self.get_logger().info(f"Loading YOLOv5 model from {self.model_path}")
-            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
+            self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=self.model_path, force_reload=True)
             self.get_logger().info("YOLOv5 model loaded successfully")
         except Exception as e:
             self.get_logger().error(f"Failed to load YOLOv5 model: {e}")

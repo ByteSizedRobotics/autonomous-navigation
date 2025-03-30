@@ -3,11 +3,15 @@ import cv2
 import torch
 import argparse
 import time
+import os
+import subprocess as sp
+import shlex
 import threading
 import platform
 import pathlib
 from pathlib import Path
-
+#sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
+import cv2
 last_saved_time = 0
 model = None
 
@@ -25,54 +29,58 @@ def load_model():
 
 # PERFORMS LIVE VIDEO INFERENCE
 def live_camera_inference(pathSavedImages):
-    # Define GStreamer pipeline for libcamera with IMX219 camera
-    pipeline = (
-        'libcamerasrc ! '
-        'video/x-raw, width=640, height=480, framerate=30/1 ! '
-        'videoconvert ! '
-        'video/x-raw, format=BGR ! '
-        'appsink'
-    )
+    # Define the FIFO (named pipe)
+    fifo_path = "/tmp/camera_pipe"
+
+    # Ensure the FIFO does not exist before creating
+    if os.path.exists(fifo_path):
+        os.remove(fifo_path)
+    os.mkfifo(fifo_path)
+
+    # Start libcamera-vid process without preview (remove --nopreview to see camera stream)
+    cmd = f"libcamera-vid -t 0 --width 640 --height 480 --framerate 15 --codec mjpeg --inline -o {fifo_path} --nopreview"
+    process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
+
+    # OpenCV Capture from the named pipe
+    cap = cv2.VideoCapture(fifo_path)
     
-    # Create VideoCapture object with GStreamer pipeline
-    camera = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
-    
-    if not camera.isOpened():
+    if not cap.isOpened():
         print("Error: Could not open camera with libcamera.")
         return
     
     print("Camera opened successfully with libcamera")
 
     while True:
-        success, frame = camera.read()
+        success, frame = cap.read()
         if not success:
             print("Failed to read frame from camera")
             break
-
+        
         # Convert BGR to RGB for YOLOv5
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
         # Run inference
-        results = model(frame_rgb)
+        with torch.no_grad():
+            results = model(frame_rgb)
 
         # Render results
         results.render()
         rendered_frame = results.ims[0]
         
         # Convert back to BGR for OpenCV display
-        display_frame = cv2.cvtColor(rendered_frame, cv2.COLOR_RGB2BGR)
+        # display_frame = cv2.cvtColor(rendered_frame, cv2.COLOR_RGB2BGR)
         
         # Display the frame
-        cv2.imshow('YOLOv5 Live', display_frame)
+        # cv2.imshow('YOLOv5 Live', display_frame)
 
         # Save pictures in a separate thread
         threading.Thread(target=save_pictures, args=(frame, results, pathSavedImages)).start()
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # break the loop when press q
-            break
+        # if cv2.waitKey(1) & 0xFF == ord('q'):  # break the loop when press q
+            # break
 
-    camera.release()
-    cv2.destroyAllWindows()
+    cap.release()
+    # cv2.destroyAllWindows()
 
 # SAVES PICTURES EVERY 10 SECONDS IF OBJECT DETECTED WITH CONFIDENCE ABOVE THRESHOLD
 def save_pictures(frame, results, pathSavedImages):
@@ -81,13 +89,13 @@ def save_pictures(frame, results, pathSavedImages):
     global last_saved_time
     current_time = time.time()
 
-    if (current_time - last_saved_time >= 10):  # save images every 10 seconds if object detected with confidence above 50% 
+    if (current_time - last_saved_time >= 2):  # save images every 10 seconds if object detected with confidence above 50% 
         detections = results.xyxy[0].cpu().numpy()  # results.xyxy[0] contains all detected objects in format [x1, y1, x2, y2, confidence, class]
 
         # check if any object has confidence above threshold
         save_image = any(det[4] > CONFIDENCE_THRESHOLD for det in detections)
 
-        if save_image:
+        if true:
             # Create directory if it doesn't exist
             os.makedirs(pathSavedImages, exist_ok=True)
             
