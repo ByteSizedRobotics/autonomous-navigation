@@ -59,9 +59,9 @@ class WebRTCPublisherNode(Node):
         self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         
         # display received camera stream with opencv
-        small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
-        cv2.imshow("Self Frames", small_frame)
-        cv2.waitKey(1)
+        # small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
+        # cv2.imshow("Self Frames", small_frame)
+        # cv2.waitKey(1)
 
         #if self.current_frame is not None:
         #    self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
