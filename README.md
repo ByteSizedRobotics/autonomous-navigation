@@ -1,4 +1,4 @@
-# Autonomous Navigation (AutoNav)
+# Autonomous Navigation (Rover)
 
 ![Version](https://img.shields.io/badge/version-0.1-blue)
 ![ROS2](https://img.shields.io/badge/ROS2-compatible-green)
@@ -49,17 +49,8 @@ The initial version implements basic obstacle detection using a Lidar sensor.
    source install/setup.bash
    ```
 
-## Run batch node
+## Run the MAIN launch file
+```ros2 launch obstacle_detection main.launch.py```
 
-+ Once built > python3 batch_run.py
+This should launch the current implemented modules (GPS, Manual Control with Front-end, LiDAR, Live-CSI Camera Stream)
 
-## Project Roadmap
-
-- [x] V0.1: Basic obstacle detection
-- [ ] V0.2: Improved obstacle detection
-- [ ] V0.3: Path planning
-- [ ] V1.0: Full autonomous navigation
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
