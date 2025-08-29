@@ -41,9 +41,9 @@ class NodeStatus(Enum):
     STOPPING = "stopping"
 
 
-class RoverCommandCenter(Node):
+class RoverCommandCentre(Node):
     def __init__(self):
-        super().__init__('rover_command_center')
+        super().__init__('rover_command_centre')
         
         # Node status tracking
         self.node_status = {
@@ -386,7 +386,7 @@ def main(args=None):
     # Use MultiThreadedExecutor for better performance
     executor = MultiThreadedExecutor()
     
-    node = RoverCommandCenter()
+    node = RoverCommandCentre()
     executor.add_node(node)
     
     try:

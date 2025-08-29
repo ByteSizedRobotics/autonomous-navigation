@@ -21,9 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'rover_command_center = command_centre.rover_command_center:main',
-            'rover_client_example = command_centre.rover_client_example:main',
-            'rover_command_tester = command_centre.rover_command_tester:main',
+            'rover_command_centre = command_centre.rover_command_centre:main',
         ],
     },
 )

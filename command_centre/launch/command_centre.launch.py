@@ -27,8 +27,8 @@ def generate_launch_description():
         # Rover Command Center Node
         Node(
             package='command_centre',
-            executable='rover_command_center',
-            name='rover_command_center',
+            executable='rover_command_centre',
+            name='rover_command_centre',
             output='screen',
             parameters=[{
                 'auto_start_nodes': LaunchConfiguration('auto_start_nodes'),
