@@ -119,6 +119,7 @@ class CSIVideoNode(Node):
         try:
             while rclpy.ok():
                 ret, frame = cap.read()
+                self.get_logger().info(f"GOTHERE0")
                 if not ret:
                     self.get_logger().warn("Failed to capture frame")
                     time.sleep(0.1)
@@ -136,6 +137,7 @@ class CSIVideoNode(Node):
                     for det in detections:
                         x1, y1, x2, y2, conf, cls = det
                         if conf > self.confidence_threshold:
+                            self.get_logger().info(f"GOTHERE1")
                             detection_found = True
                             label = f"{self.model.names[int(cls)]}: {conf:.2f}"
                             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
