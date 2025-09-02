@@ -12,7 +12,7 @@ if os.path.exists(fifo_path):
 os.mkfifo(fifo_path)
 
 # Start libcamera-vid process
-cmd = f"libcamera-vid -t 0 --width 640 --height 480 --framerate 30 --codec mjpeg --inline -o {fifo_path}"
+cmd = f"libcamera-vid -t 0 --width 640 --height 640 --framerate 30 --codec mjpeg --inline -o {fifo_path}" # this opens new cam window (add --nopreview if want no window)
 process = sp.Popen(shlex.split(cmd))
 
 # OpenCV Capture from the named pipe
@@ -34,7 +34,7 @@ while True:
         print("Failed to read frame")
         break
 
-    cv2.imshow("CSI Camera Stream", frame)
+    cv2.imshow("CSI Camera Stream", frame) # this also opens cam window for received frames
 
     # Break on 'q' key press
     if cv2.waitKey(1) & 0xFF == ord('q'):

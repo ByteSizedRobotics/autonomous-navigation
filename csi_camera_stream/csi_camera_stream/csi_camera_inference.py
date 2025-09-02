@@ -27,11 +27,13 @@ class CSIVideoNode(Node):
         self.declare_parameter('height', 1232)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
+        self.declare_parameter('confidence_threshold', 0.5)  # Add missing parameter
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
+        self.confidence_threshold = self.get_parameter('confidence_threshold').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'csi_video_stream', 1)
@@ -65,7 +67,6 @@ class CSIVideoNode(Node):
         else:
             pathlib.WindowsPath = pathlib.PosixPath
             
-        #self.model_path = str(Path("best.pt"))
         self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
 
         self.load_model()
@@ -75,11 +76,11 @@ class CSIVideoNode(Node):
     
     def load_model(self):
         try:
-
-
             self.get_logger().info(f"Loading YOLOv5 model from {self.model_path}")
             self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=self.model_path, force_reload=True)
             self.get_logger().info("YOLOv5 model loaded successfully")
+            # Add your debug line here
+            self.get_logger().info("DEBUG: Model loading completed")
         except Exception as e:
             self.get_logger().error(f"Failed to load YOLOv5 model: {e}")
             exit(1)
@@ -106,47 +107,49 @@ class CSIVideoNode(Node):
         self.get_logger().info("Camera opened successfully using libcamera")
         rate = self.create_rate(self.fps)
 
-        while rclpy.ok():
-            ret, frame = cap.read()
-            if not ret:
-                self.get_logger().warn("Failed to capture frame")
-                time.sleep(0.1)
-                continue
-
-            now = self.get_clock().now().to_msg()
-        
         try:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = self.model(frame_rgb)
-            detections = results.xyxy[0].cpu().numpy()
+            while rclpy.ok():
+                ret, frame = cap.read()
+                if not ret:
+                    self.get_logger().warn("Failed to capture frame")
+                    time.sleep(0.1)
+                    continue
 
-            # Draw bounding boxes on frame
-            for det in detections:
-                x1, y1, x2, y2, conf, cls = det
-                if conf > self.confidence_threshold:
-                    label = f"{self.model.names[int(cls)]}: {conf:.2f}"
-                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                    cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                now = self.get_clock().now().to_msg()
             
-            # Convert frame with overlays to ROS message
-            inference_img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-            inference_img_msg.header.stamp = now
-            inference_img_msg.header.frame_id = self.camera_frame_id
-            
-            # raw_img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-            # raw_img_msg.header.stamp = now
-            # raw_img_msg.header.frame_id = self.camera_frame_id
-            
-            # self.camera_info_msg.header.stamp = now
-            
-            # self.raw_image_pub.publish(raw_img_msg)
-            self.image_pub.publish(inference_img_msg)
-            # self.camera_info_pub.publish(self.camera_info_msg)
+                try:
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    results = self.model(frame_rgb)
+                    detections = results.xyxy[0].cpu().numpy()
+
+                    # Draw bounding boxes on frame
+                    for det in detections:
+                        x1, y1, x2, y2, conf, cls = det
+                        if conf > self.confidence_threshold:
+                            label = f"{self.model.names[int(cls)]}: {conf:.2f}"
+                            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                            cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    
+                    # Convert frame with overlays to ROS message
+                    inference_img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
+                    inference_img_msg.header.stamp = now
+                    inference_img_msg.header.frame_id = self.camera_frame_id
+                    
+                    self.image_pub.publish(inference_img_msg)
+                
+                except Exception as e:
+                    self.get_logger().error(f"Error during inference: {e}")
+                
+                rate.sleep()
         
-        except Exception as e:
-            self.get_logger().error(f"Error during inference: {e}")
-        
-        rate.sleep()
+        finally:
+            # Cleanup
+            cap.release()
+            process.terminate()
+            process.wait()
+            if os.path.exists(fifo_path):
+                os.remove(fifo_path)
+            self.get_logger().info("Camera stopped and resources cleaned up")
 
 def main(args=None):
     rclpy.init(args=args)

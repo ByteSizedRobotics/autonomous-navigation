@@ -1,6 +1,6 @@
 nmea_navsat_driver:
   ros__parameters:
-    port: "/dev/GPS_serial"
+    port: "/dev/gps_serial"
     baud: 9600
     frame_id: "gps"
     time_ref_source: "gps"
