@@ -27,13 +27,15 @@ class CSIVideoNode(Node):
         self.declare_parameter('height', 1232)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
-        self.declare_parameter('confidence_threshold', 0.5)  # Add missing parameter
+        self.declare_parameter('confidence_threshold', 0.5)
+        self.declare_parameter('debug_mode', False)  # Add debug mode parameter
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
         self.confidence_threshold = self.get_parameter('confidence_threshold').value
+        self.debug_mode = self.get_parameter('debug_mode').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'csi_video_stream', 1)
@@ -68,6 +70,13 @@ class CSIVideoNode(Node):
             pathlib.WindowsPath = pathlib.PosixPath
             
         self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
+
+        # Setup debug directory and counter only if debug mode is enabled
+        if self.debug_mode:
+            self.debug_dir = "/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/debug_images"
+            os.makedirs(self.debug_dir, exist_ok=True)
+            self.saved_image_counter = 0
+            self.get_logger().info("DEBUG MODE ENABLED - Detection images will be saved locally")
 
         self.load_model()
 
@@ -123,12 +132,27 @@ class CSIVideoNode(Node):
                     detections = results.xyxy[0].cpu().numpy()
 
                     # Draw bounding boxes on frame
+                    detection_found = False
                     for det in detections:
                         x1, y1, x2, y2, conf, cls = det
                         if conf > self.confidence_threshold:
+                            detection_found = True
                             label = f"{self.model.names[int(cls)]}: {conf:.2f}"
                             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                             cv2.putText(frame, label, (int(x1), int(y1) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                    
+                    # Save frame if debug mode is enabled and detections are found
+                    if self.debug_mode and detection_found:
+                        self.get_logger().info("DEBUG: Detections found in frame!")
+                        # Generate filename with timestamp
+                        timestamp = time.strftime("%Y%m%d_%H%M%S")
+                        filename = f"detection_{timestamp}_{self.saved_image_counter:04d}.jpg"
+                        filepath = os.path.join(self.debug_dir, filename)
+                        
+                        # Save the frame with bounding boxes
+                        cv2.imwrite(filepath, frame)
+                        self.get_logger().info(f"DEBUG: Saved detection frame to {filepath}")
+                        self.saved_image_counter += 1
                     
                     # Convert frame with overlays to ROS message
                     inference_img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
