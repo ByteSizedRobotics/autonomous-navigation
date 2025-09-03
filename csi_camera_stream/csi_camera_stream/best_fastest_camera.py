@@ -1,10 +1,6 @@
 import rclpy
 from rclpy.node import Node
-import sys
 import os
-import subprocess as sp
-import shlex
-import platform
 import pathlib
 from pathlib import Path
 from sensor_msgs.msg import Image, CameraInfo
@@ -13,7 +9,9 @@ import threading
 import time
 from queue import Queue
 
-# OpenCV and Torch imports
+from picamera2 import Picamera2
+from libcamera import Transform
+
 sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
 import cv2
 import time
@@ -21,7 +19,6 @@ import time
 sys.path.insert(0, '/home/adminbyte/venv/lib/python3.12/site-packages')
 import numpy as np
 import torch
-
 
 class CSIVideoNode(Node):
     def __init__(self):
@@ -55,17 +52,18 @@ class CSIVideoNode(Node):
         self.camera_info_msg.header.frame_id = self.camera_frame_id
         self.camera_info_msg.width = self.width
         self.camera_info_msg.height = self.height
+
         fx = self.width / 2.0
         fy = self.height / 2.0
         cx = self.width / 2.0
         cy = self.height / 2.0
         self.camera_info_msg.distortion_model = "plumb_bob"
-        self.camera_info_msg.d = [0.0, 0.0, 0.0, 0.0, 0.0]
+        self.camera_info_msg.d = [0.0] * 5
         self.camera_info_msg.k = [fx, 0, cx, 0, fy, cy, 0, 0, 1]
         self.camera_info_msg.r = [1, 0, 0, 0, 1, 0, 0, 0, 1]
-        self.camera_info_msg.p = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
+        self.camera_info_msg.p = [fx, 0, cx, 0, fy, cy, 0, 0, 0, 1, 0]
 
-        # Debug directory
+        # Debug
         self.debug_dir = None
         if self.debug_mode:
             self.debug_dir = str(Path(__file__).parent / "debug_images")
@@ -80,18 +78,14 @@ class CSIVideoNode(Node):
         self.frame_q = Queue(maxsize=1)
         self.stop_flag = False
 
-        # YOLO model
+        # Load YOLO
         self.model = None
-        if platform.system() == 'Windows':
-            pathlib.PosixPath = pathlib.WindowsPath
-        else:
-            pathlib.WindowsPath = pathlib.PosixPath
         self.model_path = str(Path("/home/adminbyte/ros2_ws/src/autonomous-navigation/csi_camera_stream/csi_camera_stream/best.pt"))
         self.load_model()
         self.start_inference_thread()
 
-        # Start capture
-        self.run()
+        # Start Picamera2
+        self.start_camera()
 
     def load_model(self):
         try:
@@ -115,7 +109,7 @@ class CSIVideoNode(Node):
         def worker():
             while not self.stop_flag:
                 try:
-                    frame = self.frame_q.get(timeout=0.1)  # latest frame (BGR)
+                    frame = self.frame_q.get(timeout=0.1)  # lores frame (BGR)
                 except:
                     continue
                 try:
@@ -130,33 +124,28 @@ class CSIVideoNode(Node):
         t = threading.Thread(target=worker, daemon=True)
         t.start()
 
-    def run(self):
-        # Use GStreamer pipeline (low latency, raw BGR frames)
-        gst = (
-            f"libcamerasrc ! video/x-raw,width={self.width},height={self.height},framerate={self.fps}/1 "
-            "! videoconvert ! video/x-raw,format=BGR ! appsink drop=true max-buffers=1"
+    def start_camera(self):
+        self.picam2 = Picamera2()
+        config = self.picam2.create_video_configuration(
+            main={"size": (self.width, self.height), "format": "BGR888"},
+            lores={"size": (640, 480), "format": "BGR888"},
+            transform=Transform()
         )
-        cap = cv2.VideoCapture(gst, cv2.CAP_GSTREAMER)
+        self.picam2.configure(config)
+        self.picam2.start()
 
-        if not cap.isOpened():
-            self.get_logger().error("Failed to open camera with GStreamer")
-            return
+        self.get_logger().info("Picamera2 started successfully")
 
-        self.get_logger().info("Camera opened successfully")
         frame_count = 0
-
         try:
             while rclpy.ok():
-                ok, frame = cap.read()
-                if not ok:
-                    self.get_logger().warn("Failed to capture frame")
-                    time.sleep(0.01)
-                    continue
+                lores = self.picam2.capture_array("lores")
+                frame = self.picam2.capture_array("main")
 
                 frame_count += 1
                 now = self.get_clock().now().to_msg()
 
-                # Send to inference every N frames
+                # Send lores frame for inference
                 if frame_count % self.inference_every_n_frames == 0:
                     if self.frame_q.full():
                         try:
@@ -164,7 +153,7 @@ class CSIVideoNode(Node):
                         except:
                             pass
                     try:
-                        self.frame_q.put_nowait(frame)
+                        self.frame_q.put_nowait(lores)
                     except:
                         pass
 
@@ -176,12 +165,16 @@ class CSIVideoNode(Node):
                     new_detection = self.new_detection_available
                     self.new_detection_available = False
 
+                scale_x = frame.shape[1] / lores.shape[1]
+                scale_y = frame.shape[0] / lores.shape[0]
+
                 for x1, y1, x2, y2, conf, cls in dets:
                     if conf >= self.confidence_threshold:
                         detection_found = True
                         label = f"{self.model.names[int(cls)]}:{conf:.2f}"
-                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                        cv2.putText(frame, label, (int(x1), int(y1) - 8),
+                        x1, y1, x2, y2 = int(x1 * scale_x), int(y1 * scale_y), int(x2 * scale_x), int(y2 * scale_y)
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(frame, label, (x1, y1 - 8),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
                 # Save debug images
@@ -198,7 +191,7 @@ class CSIVideoNode(Node):
 
         finally:
             self.stop_flag = True
-            cap.release()
+            self.picam2.stop()
             self.get_logger().info("Camera stopped and resources cleaned up")
 
 
