@@ -14,7 +14,11 @@ import time
 from queue import Queue
 
 # OpenCV and Torch imports
+sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
 import cv2
+import time
+
+sys.path.insert(0, '/home/adminbyte/venv/lib/python3.12/site-packages')
 import numpy as np
 import torch
 
