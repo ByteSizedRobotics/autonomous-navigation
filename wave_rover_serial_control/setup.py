@@ -20,6 +20,7 @@ setup(
         'console_scripts': [
             'serial_motor_node = potrider.serial_motor_node:main',
             'wasd_control = potrider.wasd_control:main',
+            'battery_check = potrider.battery_check:main',
         ],
     },
 )
