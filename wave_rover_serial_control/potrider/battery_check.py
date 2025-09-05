@@ -34,7 +34,7 @@ class BatteryCheck(Node):
         self.enable_feedback(True)
 
     def enable_feedback(self, enable: bool):
-        """Enable or disable continuous feedback from rover."""
+        # Enable or disable continuous feedback from rover
         
         if enable:
             cmd = {"T":131,"cmd":1}
@@ -44,7 +44,7 @@ class BatteryCheck(Node):
             self.ser.write((json.dumps(cmd) + '\n').encode('utf-8'))
             self.get_logger().info(f"{'Enabled' if enable else 'Disabled'} continuous feedback")
         except Exception as e:
-            self.get_logger().error(f"Failed to send feedback command: {e}")
+            self.get_logger().error(f"Failed to send command: {e}")
 
     def timer_callback(self):
         try:
@@ -58,18 +58,20 @@ class BatteryCheck(Node):
                 return
 
             data = json.loads(line)
+            """
             if "v" in data:
                 raw_v = data["v"]
 
                 # Convert voltage → percentage
                 level = (raw_v - 9.0) / (12.6 - 9.0) * 100.0
                 level = max(0.0, min(100.0, level))
+            """
+            
+            msg = Float32()
+            msg.data = data
+            self.publisher_.publish(msg)
 
-                msg = Float32()
-                msg.data = level
-                self.publisher_.publish(msg)
-
-                self.get_logger().info(f"Battery: {raw_v:.2f} V → {level:.1f}%")
+            # self.get_logger().info(f"Battery: {raw_v:.2f} V → {level:.1f}%")
 
         except json.JSONDecodeError:
             pass  # ignore junk lines
