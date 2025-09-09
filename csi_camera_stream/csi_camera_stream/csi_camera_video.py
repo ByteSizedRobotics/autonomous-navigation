@@ -80,12 +80,11 @@ class CSIVideoNode(Node):
         self.get_logger().info("Camera opened successfully using libcamera")
         
         # Debugging: Check video capture properties
-        self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
-        self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
-        self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+        # self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
+        # self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
+        # self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
         
         frame_count = 0
-        start_time = time.time()
         
         try:
             while rclpy.ok():
