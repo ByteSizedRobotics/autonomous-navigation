@@ -151,63 +151,32 @@ class CSIVideoNode(Node):
         self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
         self.get_logger().info(f"Buffer Size: {cap.get(cv2.CAP_PROP_BUFFERSIZE)}")
         
-        frame_count = 0
-        start_time = time.time()
-        last_fps_time = start_time
-        fps_frame_count = 0
+    # Removed frame counting and timing for lightweight operation
         
         try:
             while rclpy.ok() and not self.should_stop:
                 ret, frame = cap.read()
                 if not ret:
                     self.get_logger().warn("Failed to capture frame")
-                    time.sleep(0.01)  # Shorter delay
                     continue
-                
-                # Get timestamp once
                 now = self.get_clock().now().to_msg()
-                
-                # Add frame to processing queue (non-blocking)
                 try:
-                    # Drop frame if queue is full to maintain real-time performance
                     if self.frame_queue.full():
                         try:
-                            self.frame_queue.get_nowait()  # Remove oldest frame
+                            self.frame_queue.get_nowait()
                         except queue.Empty:
                             pass
-                    
                     self.frame_queue.put_nowait((frame, now))
-                    
                 except queue.Full:
-                    # Skip this frame if queue is still full
                     pass
-                
-                frame_count += 1
-                fps_frame_count += 1
-                
-                # Log FPS every 100 frames
-                current_time = time.time()
-                if fps_frame_count >= 100:
-                    elapsed = current_time - last_fps_time
-                    if elapsed > 0:
-                        actual_fps = fps_frame_count / elapsed
-                        self.get_logger().info(f"Actual FPS: {actual_fps:.1f}")
-                    last_fps_time = current_time
-                    fps_frame_count = 0
-        
         except Exception as e:
             self.get_logger().error(f"Camera error: {e}")
         finally:
-            # Signal shutdown
             self.should_stop = True
-            
-            # Signal publisher thread to stop
             try:
                 self.frame_queue.put_nowait(None)
             except queue.Full:
                 pass
-            
-            # Cleanup
             cap.release()
             process.terminate()
             process.wait()
@@ -215,11 +184,6 @@ class CSIVideoNode(Node):
                 os.remove(fifo_path)
             cv2.destroyAllWindows()
             
-            total_time = time.time() - start_time
-            if total_time > 0:
-                avg_fps = frame_count / total_time
-                self.get_logger().info(f"Captured {frame_count} frames in {total_time:.2f}s (avg {avg_fps:.1f} FPS)")
-            self.get_logger().info("Camera node stopped")
 
 def main(args=None):
     rclpy.init(args=args)
