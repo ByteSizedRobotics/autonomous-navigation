@@ -24,9 +24,9 @@ class WebRTCPublisherNode(Node):
         
         # Parameters
         self.declare_parameter("video_topic", "csi_video_stream")
-        self.declare_parameter("stream_width", 1080)   # 1080x720 for streaming
-        self.declare_parameter("stream_height", 720)   # 1080x720 for streaming
-        self.declare_parameter("stream_fps", 15)       # Lower FPS for streaming
+        self.declare_parameter("stream_width", 3280)   # 3280x2464 for streaming
+        self.declare_parameter("stream_height", 2464)   # 3280x2464 for streaming
+        self.declare_parameter("stream_fps", 30)       # Lower FPS for streaming
         self.declare_parameter("quality", 80)          # JPEG quality 0-100
 
         self.video_topic = self.get_parameter("video_topic").value

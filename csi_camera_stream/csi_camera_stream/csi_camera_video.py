@@ -18,8 +18,8 @@ class CSIVideoNode(Node):
         super().__init__('csi_video_node')
         
         # Get parameters
-        self.declare_parameter('width', 1280)
-        self.declare_parameter('height', 720)
+        self.declare_parameter('width', 3280)
+        self.declare_parameter('height', 2464)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
         self.declare_parameter('bitrate', 4000000)  # 4 Mbps bitrate
@@ -144,12 +144,14 @@ class CSIVideoNode(Node):
             return
         
         self.get_logger().info("Camera opened successfully using libcamera")
-        
+        self.get_logger().info("NATHAN DEBUG1")
+        self.get_logger().info("NATHAN DEBUG2")
+
         # Log camera properties
-        self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
-        self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
-        self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-        self.get_logger().info(f"Buffer Size: {cap.get(cv2.CAP_PROP_BUFFERSIZE)}")
+        # self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
+        # self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
+        # self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+        # self.get_logger().info(f"Buffer Size: {cap.get(cv2.CAP_PROP_BUFFERSIZE)}")
         
     # Removed frame counting and timing for lightweight operation
         
