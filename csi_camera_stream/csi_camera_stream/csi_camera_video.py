@@ -108,19 +108,6 @@ class CSIVideoNode(Node):
         cmd = (f"libcamera-vid -t 0 "
                f"--width {self.width} --height {self.height} "
                f"--framerate {self.fps} "
-               f"--codec mjpeg --inline "
-               f"--quality {self.quality} "
-               f"--bitrate {self.bitrate} "
-               f"--denoise cdn_off "  # Disable denoising for speed
-               f"--awb auto "         # Auto white balance
-               f"--metering average " # Average metering for speed
-               f"--exposure normal "  # Normal exposure mode
-               f"--ev 0 "            # No exposure compensation
-               f"--shutter 0 "       # Auto shutter
-               f"--gain 0 "          # Auto gain
-               f"--brightness 0 "    # Default brightness
-               f"--contrast 1.0 "    # Default contrast
-               f"--saturation 1.0 "  # Default saturation
                f"--nopreview "       # No preview window
                f"-o {fifo_path}")
         
@@ -130,10 +117,9 @@ class CSIVideoNode(Node):
         time.sleep(1.0)
 
         # OpenCV Capture from the named pipe with optimized settings
-        cap = cv2.VideoCapture(fifo_path, cv2.CAP_GSTREAMER)
+        cap = cv2.VideoCapture(fifo_path)
         
         # Set buffer size to reduce latency
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         if not cap.isOpened():
             self.get_logger().error("Failed to open camera pipe")
@@ -146,12 +132,6 @@ class CSIVideoNode(Node):
         self.get_logger().info("Camera opened successfully using libcamera")
         self.get_logger().info("NATHAN DEBUG1")
         self.get_logger().info("NATHAN DEBUG2")
-
-        # Log camera properties
-        # self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
-        # self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
-        # self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-        # self.get_logger().info(f"Buffer Size: {cap.get(cv2.CAP_PROP_BUFFERSIZE)}")
         
     # Removed frame counting and timing for lightweight operation
         
