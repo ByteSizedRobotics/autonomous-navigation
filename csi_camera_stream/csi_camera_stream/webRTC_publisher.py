@@ -22,30 +22,22 @@ class WebRTCPublisherNode(Node):
         super().__init__("webrtc_publisher")
         
         # Parameters
-        self.declare_parameter("mode", "video")  # TODO: choose between Options: "video", "still", "inference"
         # self.declare_parameter("still_interval", 5.0)  # seconds for pictures
         self.declare_parameter("video_topic", "csi_video_stream") # video stream topic
         # self.declare_parameter("still_topic", "csi_picture") # TODO: need to update these topics with actual name
         # self.declare_parameter("inference_topic", "detected_pothole_frames")
 
-        self.mode = self.get_parameter("mode").value
         #self.still_interval = self.get_parameter("still_interval").value
-        self.video_topic = self.get_parameter("video_topic").value
         #self.still_topic = self.get_parameter("still_topic").value
         #self.inference_topic = self.get_parameter("inference_topic").value
 
         self.bridge = CvBridge()
         self.current_frame = None
-        #self.last_still_frame = None
-        #self.last_inference_frame = None
-        #self.last_still_time = 0
-        #self.last_inference_time = 0
         
         self.pc = None  # WebRTC peer connection
-        
-        self.get_logger().info(f"WebRTC publisher started in '{self.mode}' mode")
-        self.subcription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
-        self.get_logger().info(f"Subscribed to video topic: {self.video_topic}")
+
+        self.get_logger().info(f"WebRTC publisher started")
+        self.subscription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
         
         # Start WebRTC in a separate thread
         self.loop = asyncio.new_event_loop()
@@ -58,41 +50,8 @@ class WebRTCPublisherNode(Node):
     def video_callback(self, msg):
         self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         
-        # display received camera stream with opencv
-        # small_frame = cv2.resize(self.current_frame, (640, 480))  # Example size
-        # cv2.imshow("Self Frames", small_frame)
-        # cv2.waitKey(1)
-
-        #if self.current_frame is not None:
-        #    self.get_logger().info(f"Frame size: {self.current_frame.shape}")  # Should show (height, width, 3)
-        #else:
-        #    self.get_logger().warn("Converted frame is None")
-
-
-    # def still_callback(self, msg):
-    #     try:
-    #         self.last_still_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-    #         self.last_still_time = time.time()
-    #     except Exception as e:
-    #         self.get_logger().error(f"Failed to convert still image: {e}")
-
-    # def inference_callback(self, msg):
-    #     try:
-    #         self.last_inference_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
-    #         self.last_inference_time = time.time()
-    #     except Exception as e:
-    #         self.get_logger().error(f"Failed to convert inference frame: {e}")
-
     def get_current_frame(self):
-        if self.mode == "video":
-            frame = self.current_frame
-        elif self.mode == "still":
-            frame = self.last_still_frame
-        elif self.mode == "inference":
-            frame = self.last_inference_frame
-        else:
-            frame = None
-
+        frame = self.current_frame
         return frame
 
     class ROSVideoTrack(VideoStreamTrack):
