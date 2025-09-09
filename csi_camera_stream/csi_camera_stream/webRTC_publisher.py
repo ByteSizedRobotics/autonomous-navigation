@@ -148,11 +148,7 @@ class WebRTCPublisherNode(Node):
                         await self.pc.close()
                     
                     # Create new peer connection with optimized settings
-                    self.pc = RTCPeerConnection(configuration={
-                        "iceServers": [],  # No STUN/TURN for local network
-                        "bundlePolicy": "max-bundle",
-                        "rtcpMuxPolicy": "require"
-                    })
+                    self.pc = RTCPeerConnection()
                     
                     # ICE candidate handling
                     @self.pc.on("icecandidate")
@@ -165,7 +161,8 @@ class WebRTCPublisherNode(Node):
                     
                     @self.pc.on("connectionstatechange")
                     async def on_connection_state_change():
-                        self.get_logger().info(f"WebRTC connection state: {self.pc.connectionState}")
+                        if self.pc:  # Check if pc still exists
+                            self.get_logger().info(f"WebRTC connection state: {self.pc.connectionState}")
                     
                     # Set remote description
                     offer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
