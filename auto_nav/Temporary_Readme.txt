@@ -1,0 +1,36 @@
+We can't extract odometer data from the motors so we'll emulate it using GPS+IMU (Will probably be somewhat inaccurate so don't be surprised if it drifts off by a couple meters)
+
+On top of that, we will be using GPS and IMU for positional navigation.
+
+Five main components:
+	
+	GPS + IMU → Data will create globe-wide localization
+	
+	LIDAR → Pretty self explanatory; collision avoidance
+	
+	Waypoint client → Plot GPS waypoints for navigation planning towards Nav2
+	
+	Nav2 → Feeds on the given data, outputs velocity commands 
+	
+	Motor Driver → Will translate Nav2 velocity commands to JSON commands (Slave motor driver board)
+	
+We'll also need ROS2-localization package; we'll use 'navsat_transform_node' and 'efk_node' to convert IMU and GPS data to Transform Frames (ROS2 coordinate frames over time; uses tf2 library) understandable by both ROS2 and Nav2
+
+
+====== TO DO ======
+
+	- Need simple driver for IMU
+	- We have a GPS parser, but we need a simpler driver to just output raw data to /fix
+	- Create ros2 project (auto_nav)
+
+====================
+
+Startup:
+	1. Start GPS + IMU drivers → publishing '/fix', '/imu/data' and '/scan' respectively
+	
+	2. Start Waypoint client: ros2 run auto_nav gps_waypoint_client
+
+	2. Launch file: ros2 launch auto_nav bringup_rover.launch.py
+
+	3. Run Nav2 waypoint follower: ros2 run nav2_waypoint_follower waypoint_follower
+
