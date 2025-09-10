@@ -67,7 +67,7 @@ class RoverCommandCentre(Node):
 
         # Command subscribers for external control
         self.command_sub = self.create_subscription(String, '/command', self.command_callback, 10)
-        self.swdata_sub = self.create_subscription(String, '/swdata', self.swdata_callback, 10)
+        self.swdata_sub = self.create_subscription(String, '/gps_waypoints', self.swdata_callback, 10)
         self.heartbeat_sub = self.create_subscription(String, '/heartbeat', self.heartbeat_callback, 10)
         
         # Timers

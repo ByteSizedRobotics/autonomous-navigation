@@ -44,7 +44,7 @@ class SerialNode(Node):
         try:
             # Write received JSON string to serial port
             self.ser.write(msg.data.encode() + b'\n')
-            self.get_logger().info(f'Sent: {msg.data}')  # Only log received commands
+            # self.get_logger().info(f'Sent: {msg.data}')  # Only log received commands
             self.last_message_time = time.time()  # Reset the timer
         except Exception as e:
             self.get_logger().error(f'Error sending data: {e}')
