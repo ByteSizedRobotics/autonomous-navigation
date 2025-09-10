@@ -37,4 +37,12 @@ def generate_launch_description():
             respawn=True,  # Restart if the node crashes
             respawn_delay=2.0,
         ),
+        
+        # Rosbridge Websocket Server
+        Node(
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='rosbridge_websocket',
+            parameters=[{'port': 9090}]
+        )
     ])

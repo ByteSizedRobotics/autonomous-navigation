@@ -60,21 +60,15 @@ class RoverCommandCentre(Node):
         self.last_heartbeat = time.time()
         
         # Publishers for system status
-        self.rover_state_pub = self.create_publisher(String, '/rover/state', 10)
+        self.rover_state_pub = self.create_publisher(String, '/rover_state', 10)
         
         # Publisher for forwarding data to rover nodes (e.g., GPS waypoints)
-        self.waypoints_pub = self.create_publisher(String, '/rover/waypoints', 10)
-        
-        # Subscribers for monitoring rover subsystems
-        # self.gps_sub = self.create_subscription(NavSatFix, '/fix', self.gps_callback, 10)
-        # self.lidar_sub = self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)
-        # self.camera_sub = self.create_subscription(Image, '/csi_video_stream', self.camera_callback, 10)
-        # self.obstacle_sub = self.create_subscription(Bool, '/obstacle_detected', self.obstacle_callback, 10)
-        
+        self.waypoints_pub = self.create_publisher(String, '/rover_location', 10)
+
         # Command subscribers for external control
-        self.command_sub = self.create_subscription(String, '/rover/command', self.command_callback, 10)
-        self.swdata_sub = self.create_subscription(String, '/rover/swdata', self.swdata_callback, 10)
-        self.heartbeat_sub = self.create_subscription(String, '/rover/heartbeat', self.heartbeat_callback, 10)
+        self.command_sub = self.create_subscription(String, '/command', self.command_callback, 10)
+        self.swdata_sub = self.create_subscription(String, '/swdata', self.swdata_callback, 10)
+        self.heartbeat_sub = self.create_subscription(String, '/heartbeat', self.heartbeat_callback, 10)
         
         # Timers
         self.status_timer = self.create_timer(5.0, self.publish_status)
@@ -85,24 +79,6 @@ class RoverCommandCentre(Node):
         self.node_processes = {}
         
         self.get_logger().info("Rover Command Center initialized and ready")
-        
-    # def gps_callback(self, msg):
-    #     """Monitor GPS node health"""
-    #     self.node_status['gps'] = NodeStatus.RUNNING
-        
-    # def lidar_callback(self, msg):
-    #     """Monitor LiDAR node health"""
-    #     self.node_status['lidar'] = NodeStatus.RUNNING
-        
-    # def camera_callback(self, msg):
-    #     """Monitor camera node health"""
-    #     self.node_status['camera'] = NodeStatus.RUNNING
-        
-    # def obstacle_callback(self, msg):
-    #     """Monitor obstacle detection node health"""
-    #     self.node_status['obstacle_detection'] = NodeStatus.RUNNING
-    #     if msg.data:
-    #         self.get_logger().warn("Obstacle detected - consider emergency protocols")
     
     def command_callback(self, msg):
         """Process commands from external software"""
@@ -150,21 +126,6 @@ class RoverCommandCentre(Node):
                 self.waypoints_pub.publish(waypoints_msg)
                 self.get_logger().info(f"Forwarded {len(data_payload.get('waypoints', []))} waypoints to navigation system")
                 
-            # elif data_type == 'navigation_params':
-            #     # Forward navigation parameters (speed limits, behavior settings, etc.)
-            #     nav_params_msg = String()
-            #     nav_params_msg.data = json.dumps(data_payload)
-            #     # Could publish to different topic for navigation parameters
-            #     self.waypoints_pub.publish(nav_params_msg)  # Using same topic for now
-            #     self.get_logger().info("Forwarded navigation parameters to rover systems")
-                
-            # elif data_type == 'manual_command':
-            #     # Forward manual control commands (movement, camera control, etc.)
-            #     manual_cmd_msg = String()
-            #     manual_cmd_msg.data = json.dumps(data_payload)
-            #     # Could create separate publisher for manual commands
-            #     self.get_logger().info(f"Forwarded manual command: {data_payload}")
-                
             else:
                 self.get_logger().warn(f"Unknown data type: {data_type}")
                 
@@ -189,7 +150,6 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py',
-                'lidar': 'ros2 launch rplidar_ros rplidar_a1_launch.py',
                 'camera': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
                 'manual_control': 'ros2 run potrider wasd_control',
@@ -286,7 +246,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation
-        autonomous_nodes = ['gps', 'lidar', 'camera', 'obstacle_detection', 'motor_control']
+        autonomous_nodes = ['gps', 'camera', 'obstacle_detection', 'motor_control']
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -357,13 +317,6 @@ class RoverCommandCentre(Node):
         self.get_logger().info("Stop complete - all rover nodes stopped, communication node remains active")
         return True
     
-    # def monitor_nodes(self):
-    #     """Monitor node health and restart if necessary"""
-    #     for node_name, process in list(self.node_processes.items()):
-    #         if process.poll() is not None:  # Process has terminated
-    #             self.get_logger().warn(f"Node {node_name} has stopped unexpectedly")
-    #             self.node_status[node_name] = NodeStatus.ERROR
-    #             del self.node_processes[node_name]
     
     def check_heartbeat(self):
         """Check for heartbeat from external software"""
