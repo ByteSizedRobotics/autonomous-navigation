@@ -85,9 +85,9 @@ class ObstacleDetector(Node):
             distance_msg = Float32()
             distance_msg.data = float(min_obstacle_distance)
             self.obstacle_distance_pub.publish(distance_msg)
-            self.get_logger().warn(f'Obstacle detected in forward corridor! Distance: {min_obstacle_distance:.2f}m')
-        else:
-            self.get_logger().info('Forward corridor clear.')
+            # self.get_logger().warn(f'Obstacle detected in forward corridor! Distance: {min_obstacle_distance:.2f}m')
+        # else:
+            # self.get_logger().info('Forward corridor clear.')
             
         if debug:
             self.get_logger().debug(f'Points in corridor: {num_points_in_corridor}')
