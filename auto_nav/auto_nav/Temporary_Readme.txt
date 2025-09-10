@@ -21,13 +21,9 @@ We'll also need ROS2-localization package; we'll use 'navsat_transform_node' and
 
 	- Need simple driver for IMU
 	- We have a GPS parser, but we need a simpler driver to just output raw data to /fix
+	- Create ros2 project (auto_nav)
 
 ====================
-
-Build:
-	1. colcon build --packages-select auto_nav
-	
-	2. source install/setup.bash
 
 Startup:
 	1. Start GPS + IMU drivers → publishing '/fix', '/imu/data' and '/scan' respectively
