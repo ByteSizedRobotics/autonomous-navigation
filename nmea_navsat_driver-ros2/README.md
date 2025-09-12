@@ -17,3 +17,6 @@ This repo holds all code for the Autonomous Navigation (AutoNav).
 10. ros2 run nmea_navsat_driver nmea_serial_driver
 
 *Note, BN-220 runs at 9600 baud
+
++ros2 topic echo /fix
+

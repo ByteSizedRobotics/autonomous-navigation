@@ -2,10 +2,16 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>auto_nav</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>0.0.1</version>
+  <description>ROS2 Autonomous navigation package using Nav2</description>
   <maintainer email="lmarl090@uottawa.ca">ros2</maintainer>
-  <license>TODO: License declaration</license>
+  <license>None</license>
+
+  <depend>rclpy</depend>
+  <depend>nav2_bringup</depend>
+  <depend>robot_localization</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
@@ -17,9 +23,5 @@
   </export>
 </package>
 
-<depend>rclpy</depend>
-<depend>nav2_bringup</depend>
-<depend>robot_localization</depend>
-<depend>geometry_msgs</depend>
-<depend>sensor_msgs</depend>
+
 
