@@ -26,6 +26,7 @@ setup(
             'cmdvel_to_json = auto_nav.cmdvel_to_json:main',
             'gps_waypoint_client = auto_nav.gps_waypoint_client:main',
             'gps_serial_driver = auto_nav.gps_serial_driver:main',
+            'imu_serial_driver = auto_nav.imu_serial_driver:main',
         ],
     },
 )

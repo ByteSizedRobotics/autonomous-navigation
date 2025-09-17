@@ -19,14 +19,17 @@ We'll also need ROS2-localization package; we'll use 'navsat_transform_node' and
 
 ====== TO DO ======
 
-	- Need simple driver for IMU
-	- We have a GPS parser, but we need a simpler driver to just output raw data to /fix
-	- Create ros2 project (auto_nav)
+	- Test and implement ROS2 -> Nav2
 
 ====================
 
 Startup:
-	1. Start GPS + IMU drivers → publishing '/fix', '/imu/data' and '/scan' respectively
+	1. Start GPS + IMU drivers → publishing '/fix', '/imu/data' and '/scan' respectively (/imu/raw → raw array data for webapp)
+		*Make sure GPS/Rover is plugged in, persistent serial names are set (GPS_serial, rover_serial)
+		a. colcon build --packages-select auto_nav
+		b. source install/setup.bash
+		c. ros2 run auto_nav gps_serial_driver
+		d. ros2 run auto_nav imu_serial_driver
 	
 	2. Start Waypoint client: ros2 run auto_nav gps_waypoint_client
 
