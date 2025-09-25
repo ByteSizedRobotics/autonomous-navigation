@@ -44,26 +44,27 @@ class NodeStatus(Enum):
 class RoverCommandCentre(Node):
     def __init__(self):
         super().__init__('rover_command_centre')
+
+        self.rover_id = 1 # TODO: NATHAN HARDCODED HERE, BUT NEED ENV VAR IN RASPI
+        self.num_heartbeats_missed = 0
         
         # Node status tracking
         self.node_status = {
             'gps': NodeStatus.OFFLINE,
-            'lidar': NodeStatus.OFFLINE,
-            'camera': NodeStatus.OFFLINE,
+            'csi_camera_1': NodeStatus.OFFLINE,
             'obstacle_detection': NodeStatus.OFFLINE,
             'manual_control': NodeStatus.OFFLINE,
             'motor_control': NodeStatus.OFFLINE
-        }
-        
+        }        
         # System state
         self.rover_state = RoverState.IDLE
         self.last_heartbeat = time.time()
         
         # Publishers for system status
-        self.rover_state_pub = self.create_publisher(String, '/rover_state', 10)
+        self.rover_timestamp = self.create_publisher(String, '/timestamp', 10)
         
         # Publisher for forwarding data to rover nodes (e.g., GPS waypoints)
-        self.waypoints_pub = self.create_publisher(String, '/rover_location', 10)
+        # self.waypoints_pub = self.create_publisher(String, '/rover_location', 10)
 
         # Command subscribers for external control
         self.command_sub = self.create_subscription(String, '/command', self.command_callback, 10)
@@ -90,8 +91,9 @@ class RoverCommandCentre(Node):
             self.get_logger().info(f"Received command: {command_type}")
             
             if command_type == 'LaunchRover':
-                self.launch_rover_autonomous()
-                
+                if (self.verify_rover_id(command_data)):  # verify rover ID before launching
+                    self.launch_rover_autonomous()
+
             elif command_type == 'ManualControl':
                 self.launch_manual_control()
                 
@@ -246,7 +248,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation
-        autonomous_nodes = ['gps', 'camera', 'obstacle_detection', 'motor_control']
+        autonomous_nodes = ['gps', 'csi_camera_1', 'obstacle_detection', 'motor_control']
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -264,6 +266,19 @@ class RoverCommandCentre(Node):
         
         self.get_logger().info("LaunchRover complete - autonomous navigation active")
         return True
+
+    def verify_rover_id(self, command_data):
+        """verify_rover_id: Initial connection handshake with the rover"""
+        self.get_logger().info("Launch Rover command received - performing verification of rover ID")
+
+        requested_rover_id = command_data.get('rover_id')
+        if requested_rover_id != self.rover_id:
+            self.get_logger().error(f"Rover ID mismatch: expected {self.rover_id}, got {requested_rover_id}")
+            return False
+
+        self.get_logger().info(f"Request for connection to rover {self.rover_id} established successfully")
+        return True
+
     
     def launch_manual_control(self):
         """ManualControl: Stop autonomous navigation and enable manual control"""
@@ -275,13 +290,9 @@ class RoverCommandCentre(Node):
         # Stop autonomous navigation node if it exists
         # Note: You'll need to add 'autonomous_navigation' to your node_status dict if you have a dedicated autonomous nav node
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
-        if self.node_status['obstacle_detection'] == NodeStatus.RUNNING:
-            self.get_logger().info("Stopping obstacle detection - switching to manual control")
-            # Keep it running but log the state change
-            # self.stop_node('obstacle_detection')  # Uncomment if you want to stop it completely
         
         # Ensure manual control and motor control are running
-        manual_control_nodes = ['manual_control', 'motor_control', 'camera']
+        manual_control_nodes = ['manual_control', 'motor_control', 'gps', 'obstacle_detection', 'csi_camera_1']
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -303,7 +314,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.IDLE
         
         # List of all nodes to stop (excludes the communication node itself)
-        nodes_to_stop = ['gps', 'lidar', 'camera', 'obstacle_detection', 'manual_control', 'motor_control']
+        nodes_to_stop = ['gps', 'lidar', 'csi_camera_1', 'obstacle_detection', 'manual_control', 'motor_control']
         
         for node_name in nodes_to_stop:
             if self.node_status[node_name] == NodeStatus.RUNNING:
@@ -323,14 +334,20 @@ class RoverCommandCentre(Node):
         time_since_heartbeat = time.time() - self.last_heartbeat
         if time_since_heartbeat > 30:  # 30 seconds timeout
             self.get_logger().warn(f"No heartbeat received for {time_since_heartbeat:.1f} seconds")
+            num_heartbeats_missed = getattr(self, 'num_heartbeats_missed', 0) + 1
+            self.num_heartbeats_missed = num_heartbeats_missed
             # Optionally trigger emergency protocols
+            #count num of times no heartbeat
+            if self.rover_state != RoverState.IDLE and num_heartbeats_missed >= 2:
+                self.get_logger().info("Missed 2 heartbeats - stopping all rover nodes for safety")
+                self.stop_all_rover_nodes()
     
     def publish_status(self):
-        """Publish rover state"""
-        # Publish rover state
+        """Publish rover state timestamp"""
+        # Publish current timestamp
         state_msg = String()
-        state_msg.data = self.rover_state.value
-        self.rover_state_pub.publish(state_msg)
+        state_msg.data = str(time.time())
+        self.rover_timestamp.publish(state_msg)
 
 
 def main(args=None):
