@@ -125,8 +125,9 @@ class RoverCommandCentre(Node):
                 # Forward GPS waypoints to autonomous navigation system
                 waypoints_msg = String()
                 waypoints_msg.data = json.dumps(data_payload)
-                self.waypoints_pub.publish(waypoints_msg)
-                self.get_logger().info(f"Forwarded {len(data_payload.get('waypoints', []))} waypoints to navigation system")
+                # TODO: need to pass waypoints to AUTONAV in format it expects
+                # self.waypoints_pub.publish(waypoints_msg)
+                # self.get_logger().info(f"Forwarded {len(data_payload.get('waypoints', []))} waypoints to navigation system")
                 
             else:
                 self.get_logger().warn(f"Unknown data type: {data_type}")
