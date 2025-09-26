@@ -153,7 +153,7 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 launch nmea_navsat_driver nmea_serial_driver.launch.py',
-                'camera': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
+                'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
                 'manual_control': 'ros2 run potrider wasd_control',
                 'motor_control': 'ros2 run potrider serial_motor_node --ros-args -p port:=/dev/ttyAMA0'
