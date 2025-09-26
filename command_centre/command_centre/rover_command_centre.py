@@ -287,8 +287,17 @@ class RoverCommandCentre(Node):
         self.get_logger().info("Launch Rover command received - performing verification of rover ID")
 
         requested_rover_id = command_data.get('rover_id')
-        if requested_rover_id != self.rover_id:
-            self.get_logger().error(f"Rover ID mismatch: expected {self.rover_id}, got {requested_rover_id}")
+        
+        # Convert both to integers for comparison (handles string/int mismatch)
+        try:
+            requested_id_int = int(requested_rover_id)
+            expected_id_int = int(self.rover_id)
+            
+            if requested_id_int != expected_id_int:
+                self.get_logger().error(f"Rover ID mismatch: expected {expected_id_int}, got {requested_id_int}")
+                return False
+        except (ValueError, TypeError):
+            self.get_logger().error(f"Invalid rover ID format: expected integer, got {requested_rover_id}")
             return False
 
         self.get_logger().info(f"Request for connection to rover {self.rover_id} established successfully")
