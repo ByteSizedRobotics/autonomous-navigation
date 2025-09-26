@@ -170,7 +170,7 @@ class RoverCommandCentre(Node):
                 self.node_processes[node_name] = process
                 
                 # Give the node a moment to start up
-                time.sleep(15)
+                time.sleep(1)
                 
                 # Check if process is still running (basic health check)
                 if process.poll() is None:
