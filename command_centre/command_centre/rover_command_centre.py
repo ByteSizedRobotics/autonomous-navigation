@@ -267,6 +267,7 @@ class RoverCommandCentre(Node):
                 self.get_logger().info(f"Starting {node_name} for autonomous navigation")
                 success = self.start_node(node_name)
                 if not success:
+                    self.publish_node_status()
                     self.get_logger().error(f"Failed to start {node_name} - autonomous launch incomplete")
                     return False
                 time.sleep(1)  # Stagger startup to avoid resource conflicts
