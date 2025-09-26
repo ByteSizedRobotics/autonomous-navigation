@@ -40,7 +40,6 @@ class NodeStatus(Enum):
     ERROR = "error"
     STOPPING = "stopping"
 
-
 class RoverCommandCentre(Node):
     def __init__(self):
         super().__init__('rover_command_centre')
@@ -62,6 +61,7 @@ class RoverCommandCentre(Node):
         
         # Publishers for system status
         self.rover_timestamp = self.create_publisher(String, '/timestamp', 10)
+        self.node_status_pub = self.create_publisher(String, '/node_status', 10)
         
         # Publisher for forwarding data to rover nodes (e.g., GPS waypoints)
         # self.waypoints_pub = self.create_publisher(String, '/rover_location', 10)
@@ -73,7 +73,7 @@ class RoverCommandCentre(Node):
         
         # Timers
         self.status_timer = self.create_timer(5.0, self.publish_status)
-        self.heartbeat_timer = self.create_timer(5.0, self.check_heartbeat)
+        self.heartbeat_timer = self.create_timer(15.0, self.check_heartbeat)
         # self.node_monitor_timer = self.create_timer(2.0, self.monitor_nodes)
         
         # Node process tracking
@@ -168,8 +168,19 @@ class RoverCommandCentre(Node):
                     text=True
                 )
                 self.node_processes[node_name] = process
-                self.get_logger().info(f"Started node: {node_name}")
-                return True
+                
+                # Give the node a moment to start up
+                time.sleep(15)
+                
+                # Check if process is still running (basic health check)
+                if process.poll() is None:
+                    self.node_status[node_name] = NodeStatus.RUNNING
+                    self.get_logger().info(f"Started node: {node_name}")
+                    return True
+                else:
+                    self.node_status[node_name] = NodeStatus.ERROR
+                    self.get_logger().error(f"Node {node_name} failed to start - process exited immediately")
+                    return False
             else:
                 self.get_logger().error(f"No launch command defined for node: {node_name}")
                 self.node_status[node_name] = NodeStatus.ERROR
@@ -265,6 +276,9 @@ class RoverCommandCentre(Node):
             self.get_logger().info("Stopping manual control - autonomous navigation will handle movement")
             self.stop_node('manual_control')
         
+        # Publish node status after all startup attempts are complete
+        self.publish_node_status()
+        
         self.get_logger().info("LaunchRover complete - autonomous navigation active")
         return True
 
@@ -303,6 +317,9 @@ class RoverCommandCentre(Node):
                     self.get_logger().error(f"Failed to start {node_name} - manual control setup incomplete")
                     return False
                 time.sleep(0.5)
+        
+        # Publish node status after all startup attempts are complete
+        self.publish_node_status()
         
         self.get_logger().info("ManualControl complete - ready for software commands")
         return True
@@ -349,6 +366,22 @@ class RoverCommandCentre(Node):
         state_msg = String()
         state_msg.data = str(time.time())
         self.rover_timestamp.publish(state_msg)
+    
+    def publish_node_status(self):
+        """Publish current status of all nodes"""
+        status_data = {
+            "timestamp": time.time(),
+            "nodes": {}
+        }
+        
+        for node_name, status in self.node_status.items():
+            status_data["nodes"][node_name] = status.value
+        
+        status_msg = String()
+        status_msg.data = json.dumps(status_data)
+        self.node_status_pub.publish(status_msg)
+        
+        self.get_logger().info(f"Published node status: {status_data['nodes']}")
 
 
 def main(args=None):
