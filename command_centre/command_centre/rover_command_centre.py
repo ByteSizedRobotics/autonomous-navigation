@@ -50,6 +50,7 @@ class RoverCommandCentre(Node):
         # Node status tracking
         self.node_status = {
             'gps': NodeStatus.OFFLINE,
+            'imu': NodeStatus.OFFLINE,
             'csi_camera_1': NodeStatus.OFFLINE,
             'obstacle_detection': NodeStatus.OFFLINE,
             'manual_control': NodeStatus.OFFLINE,
@@ -344,7 +345,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.IDLE
         
         # List of all nodes to stop (excludes the communication node itself)
-        nodes_to_stop = ['gps', 'lidar', 'csi_camera_1', 'obstacle_detection', 'manual_control', 'motor_control']
+        nodes_to_stop = ['gps', 'imu', 'csi_camera_1', 'obstacle_detection', 'manual_control', 'motor_control']
         
         for node_name in nodes_to_stop:
             if self.node_status[node_name] == NodeStatus.RUNNING:
