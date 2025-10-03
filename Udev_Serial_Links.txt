@@ -1,0 +1,16 @@
+# GPS module
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", SYMLINK+="GPS_serial"
+
+# Rover
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="7cb451d0041cef1185d59cd94909ffd0", SYMLINK+="rover_serial"
+
+# Lidar
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="092eab9d4d2bc343a6d1f1d39d83ba00", SYMLINK+="lidar_serial"
+
+Under '/etc/udev/rules.d' as 99-serial-names.rules
+
+Then,
+
+sudo udevadm control --reload
+sudo udevadm trigger
+
