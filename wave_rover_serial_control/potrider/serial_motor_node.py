@@ -10,7 +10,7 @@ class SerialNode(Node):
         super().__init__('serial_motor_node')
         
         # Declare and get parameters
-        self.declare_parameter('port', '/dev/ttyAMA0')
+        self.declare_parameter('port', '/dev/rover_serial')
         self.port = self.get_parameter('port').get_parameter_value().string_value
 
         # Initialize serial connection
