@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<robot name="esp32_robot">
+
+  <!-- Base link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.4 0.3 0.1"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.4 0.3 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0.0" ixz="0.0" iyz="0.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </inertial>
+  </link>
+
+  <!-- Front left wheel -->
+  <link name="wheel_fl"/>
+  <joint name="wheel_fl_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="wheel_fl"/>
+    <origin xyz="0.15 0.1 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Front right wheel -->
+  <link name="wheel_fr"/>
+  <joint name="wheel_fr_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="wheel_fr"/>
+    <origin xyz="0.15 -0.1 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Rear left wheel -->
+  <link name="wheel_rl"/>
+  <joint name="wheel_rl_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="wheel_rl"/>
+    <origin xyz="-0.15 0.1 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Rear right wheel -->
+  <link name="wheel_rr"/>
+  <joint name="wheel_rr_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="wheel_rr"/>
+    <origin xyz="-0.15 -0.1 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>
+

@@ -36,4 +36,24 @@ Startup:
 	2. Launch file: ros2 launch auto_nav bringup_rover.launch.py
 
 	3. Run Nav2 waypoint follower: ros2 run nav2_waypoint_follower waypoint_follower
+	
+	
+	
+==========
+temp:
+
+sudo apt update
+sudo apt install -y \
+  ros-jazzy-robot-localization \
+  ros-jazzy-navigation2 \
+  ros-jazzy-nav2-bringup \
+  ros-jazzy-nav2-costmap-2d \
+  ros-jazzy-nav2-controller \
+  ros-jazzy-nav2-planner \
+  ros-jazzy-nav2-behavior-tree \
+  ros-jazzy-nav2-lifecycle-manager \
+  ros-jazzy-nav2-msgs \
+  ros-jazzy-nav2-rviz-plugins \
+  ros-jazzy-nav2-regulated-pure-pursuit-controller
+
 

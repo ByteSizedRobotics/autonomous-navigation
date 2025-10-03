@@ -7,13 +7,16 @@ setup(
     version='0.0.1',
     packages=[package_name],
     data_files=[
-        #('share/ament_index/resource_index/packages',
-            #['resource/' + package_name]),
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        #('share/' + package_name + '/launch', ['launch/localization.launch.py',
-                                               #'launch/nav2.launch.py',
-                                               #'launch/sensors.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/nav2_outdoor.launch.py']),
+        ('share/' + package_name + '/config', [
+            'config/ekf.yaml',
+            'config/nav2_params.yaml'
+        ]),
     ],
+
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Louis Marleau',
@@ -27,6 +30,7 @@ setup(
             'gps_waypoint_client = auto_nav.gps_waypoint_client:main',
             'gps_serial_driver = auto_nav.gps_serial_driver:main',
             'imu_serial_driver = auto_nav.imu_serial_driver:main',
+            'gps_imu_to_odom = auto_nav.gps_imu_to_odom:main',
         ],
     },
 )
