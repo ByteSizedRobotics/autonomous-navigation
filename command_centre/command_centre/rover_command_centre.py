@@ -76,6 +76,7 @@ class RoverCommandCentre(Node):
         
         # Timers
         self.status_timer = self.create_timer(5.0, self.publish_status)
+        self.node_status_timer = self.create_timer(10.0, self.publish_node_status)  # Publish node status every 10 seconds
         self.heartbeat_timer = self.create_timer(15.0, self.check_heartbeat)
         # self.node_monitor_timer = self.create_timer(2.0, self.monitor_nodes)
         
@@ -267,7 +268,29 @@ class RoverCommandCentre(Node):
         try:
             self.node_status[node_name] = NodeStatus.STOPPING
             
-            # Terminate the process if it exists
+            # Define specific ROS2 node names that should be killed for each node type
+            # This helps ensure we catch all related processes
+            node_kill_targets = {
+                'obstacle_detection': ['rplidar_node', 'obstacle_detector'],
+                'csi_camera_1': ['csi_camera_inference', 'csi_camera_video'],
+                'gps': ['gps_serial_driver'],
+                'imu': ['imu_serial_driver'],
+                'manual_control': ['wasd_control'],
+                'motor_control': ['serial_motor_node']
+            }
+            
+            # First, try to kill by ROS2 node names using pkill
+            if node_name in node_kill_targets:
+                for target_node in node_kill_targets[node_name]:
+                    try:
+                        self.get_logger().info(f"Killing ROS2 node: {target_node}")
+                        # Use pkill to find and kill processes by name
+                        subprocess.run(['pkill', '-9', '-f', target_node], 
+                                     capture_output=True, timeout=2)
+                    except Exception as e:
+                        self.get_logger().debug(f"pkill for {target_node} failed: {e}")
+            
+            # Terminate the process if it exists in our tracking
             if node_name in self.node_processes:
                 process = self.node_processes[node_name]
                 
@@ -279,48 +302,46 @@ class RoverCommandCentre(Node):
                     # Log what we're killing
                     self.get_logger().info(f"Stopping {node_name} (PID: {process.pid}) and {len(children)} child processes")
                     
-                    # Send SIGTERM to parent and all children
+                    # Send SIGKILL immediately to all children (more aggressive)
                     for child in children:
                         try:
-                            self.get_logger().debug(f"Terminating child process: {child.pid}")
-                            child.terminate()
+                            self.get_logger().debug(f"Force killing child process: {child.pid} ({child.name()})")
+                            child.kill()  # Changed from terminate() to kill()
                         except psutil.NoSuchProcess:
                             pass
+                        except Exception as e:
+                            self.get_logger().debug(f"Error killing child {child.pid}: {e}")
                     
-                    parent.terminate()
+                    # Force kill parent
+                    parent.kill()  # Changed from terminate() to kill()
                     
-                    # Wait for processes to terminate gracefully
-                    gone, alive = psutil.wait_procs(children + [parent], timeout=3)
+                    # Wait for processes to die
+                    gone, alive = psutil.wait_procs(children + [parent], timeout=2)
                     
-                    # Force kill any remaining processes
+                    # Log any processes that are still alive
                     if alive:
-                        self.get_logger().warn(f"Force killing {len(alive)} processes that didn't terminate gracefully")
+                        self.get_logger().error(f"Failed to kill {len(alive)} processes!")
                         for p in alive:
                             try:
-                                self.get_logger().debug(f"Force killing process: {p.pid}")
-                                p.kill()
-                            except psutil.NoSuchProcess:
+                                self.get_logger().error(f"  Still alive: PID {p.pid} - {p.name()}")
+                            except:
                                 pass
-                    
-                    # Final wait
-                    try:
-                        process.wait(timeout=2)
-                    except subprocess.TimeoutExpired:
-                        process.kill()
-                        process.wait()
                         
                 except psutil.NoSuchProcess:
                     self.get_logger().warn(f"Process for {node_name} already terminated")
                 except Exception as e:
                     self.get_logger().error(f"Error stopping process tree for {node_name}: {e}")
-                    # Fallback to simple terminate
+                    # Fallback to simple kill
                     try:
-                        process.terminate()
-                        process.wait(timeout=3)
-                    except:
                         process.kill()
+                        process.wait(timeout=2)
+                    except:
+                        pass
                 
                 del self.node_processes[node_name]
+            
+            # Give a moment for processes to clean up
+            time.sleep(0.5)
                 
             self.node_status[node_name] = NodeStatus.OFFLINE
             self.get_logger().info(f"Stopped node: {node_name}")
@@ -331,11 +352,47 @@ class RoverCommandCentre(Node):
             self.node_status[node_name] = NodeStatus.ERROR
             return False
     
+    def emergency_kill_all_ros_nodes(self):
+        """
+        Emergency function to kill ALL ROS2 nodes related to rover operations.
+        This is more aggressive than stop_node and doesn't rely on tracked processes.
+        """
+        self.get_logger().warn("Emergency kill: Terminating all known rover ROS2 nodes")
+        
+        # List of all possible ROS2 node executables that might be running
+        all_node_executables = [
+            'rplidar_node',           # Lidar driver
+            'obstacle_detector',      # Obstacle detection
+            'csi_camera_inference',   # Camera inference
+            'csi_camera_video',       # Camera video
+            'gps_serial_driver',      # GPS driver
+            'imu_serial_driver',      # IMU driver
+            'wasd_control',           # Manual control
+            'serial_motor_node',      # Motor control
+        ]
+        
+        for executable in all_node_executables:
+            try:
+                result = subprocess.run(['pkill', '-9', '-f', executable], 
+                                      capture_output=True, 
+                                      timeout=2,
+                                      text=True)
+                if result.returncode == 0:
+                    self.get_logger().info(f"Killed processes matching: {executable}")
+            except Exception as e:
+                self.get_logger().debug(f"pkill for {executable} returned: {e}")
+        
+        self.get_logger().info("Emergency kill complete")
+    
     def stop_all_nodes(self):
         """Stop all rover nodes"""
         self.get_logger().info("Stopping all rover nodes...")
         for node_name in self.node_status.keys():
             self.stop_node(node_name)
+        
+        # As a safety measure, do an emergency kill to catch any orphaned processes
+        self.get_logger().info("Running emergency cleanup to catch any remaining processes...")
+        self.emergency_kill_all_ros_nodes()
     
     def stop_all_movement(self):
         """Send stop commands to all movement systems"""
@@ -464,7 +521,11 @@ class RoverCommandCentre(Node):
         for node_name in nodes_to_stop:
             self.get_logger().info(f"Stopping {node_name} (current status: {self.node_status[node_name].value})")
             self.stop_node(node_name)
-            time.sleep(0.3)  # Brief delay between stops
+            time.sleep(0.2)  # Brief delay between stops
+        
+        # Emergency cleanup to catch any orphaned processes (especially lidar)
+        self.get_logger().info("Running emergency cleanup to ensure all processes are terminated...")
+        self.emergency_kill_all_ros_nodes()
         
         # Ensure all movement is stopped
         self.stop_all_movement()
@@ -472,8 +533,6 @@ class RoverCommandCentre(Node):
         # Publish final node status
         self.publish_node_status()
         
-        self.get_logger().info("Stop complete - all rover nodes stopped, communication node remains active")
-        return True
         self.get_logger().info("Stop complete - all rover nodes stopped, communication node remains active")
         return True
     
