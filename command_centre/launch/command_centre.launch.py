@@ -4,9 +4,31 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration
+import subprocess
+import sys
+
+
+def check_and_install_dependencies():
+    """Check if required Python dependencies are installed, and install if missing"""
+    required_packages = ['psutil']
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+            print(f"✓ {package} is already installed")
+        except ImportError:
+            print(f"✗ {package} not found. Installing...")
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', package])
+                print(f"✓ Successfully installed {package}")
+            except subprocess.CalledProcessError as e:
+                print(f"✗ Failed to install {package}: {e}")
+                print(f"  Please manually install: pip install {package}")
 
 
 def generate_launch_description():
+    # Check and install dependencies before launching
+    check_and_install_dependencies()
     return LaunchDescription([
         # Launch arguments
         DeclareLaunchArgument(

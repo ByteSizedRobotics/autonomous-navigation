@@ -12,7 +12,10 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', ['launch/command_centre.launch.py']),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'psutil',  # Required for process management in rover_command_centre
+    ],
     zip_safe=True,
     maintainer='ByteSizedRobotics',
     maintainer_email='your.email@example.com',

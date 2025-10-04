@@ -17,6 +17,8 @@ import subprocess
 import threading
 import json
 import time
+import signal
+import psutil
 from enum import Enum
 
 # Standard ROS2 messages
@@ -172,18 +174,42 @@ class RoverCommandCentre(Node):
                 )
                 self.node_processes[node_name] = process
                 
-                # Give the node a moment to start up
-                time.sleep(1)
+                # Give the node more time to start up and potentially fail if hardware is missing
+                # Hardware-dependent nodes (GPS, IMU) typically fail within 2-3 seconds
+                time.sleep(3)
                 
-                # Check if process is still running (basic health check)
-                if process.poll() is None:
-                    self.node_status[node_name] = NodeStatus.RUNNING
-                    self.get_logger().info(f"Started node: {node_name}")
-                    return True
-                else:
-                    self.node_status[node_name] = NodeStatus.ERROR
-                    self.get_logger().error(f"Node {node_name} failed to start - process exited immediately")
+                # Check if process has already exited
+                exit_code = process.poll()
+                if exit_code is not None:
+                    # Process has terminated - get output for diagnostics
+                    try:
+                        stdout, stderr = process.communicate(timeout=1)
+                        self.node_status[node_name] = NodeStatus.ERROR
+                        self.get_logger().error(f"Node {node_name} failed to start - process exited with code {exit_code}")
+                        if stderr:
+                            self.get_logger().error(f"Error output: {stderr[:500]}")
+                        if stdout:
+                            self.get_logger().info(f"Standard output: {stdout[:500]}")
+                    except subprocess.TimeoutExpired:
+                        self.node_status[node_name] = NodeStatus.ERROR
+                        self.get_logger().error(f"Node {node_name} failed - could not read output")
                     return False
+                
+                # Process is still running - assume success
+                # Note: Some nodes may run but fail to connect to hardware
+                # They will continue running and log errors, but we mark them as running
+                self.node_status[node_name] = NodeStatus.RUNNING
+                self.get_logger().info(f"Started node: {node_name}")
+                
+                # Start a background thread to monitor the node's stderr for errors
+                monitor_thread = threading.Thread(
+                    target=self._monitor_node_errors,
+                    args=(node_name, process),
+                    daemon=True
+                )
+                monitor_thread.start()
+                
+                return True
             else:
                 self.get_logger().error(f"No launch command defined for node: {node_name}")
                 self.node_status[node_name] = NodeStatus.ERROR
@@ -194,8 +220,46 @@ class RoverCommandCentre(Node):
             self.node_status[node_name] = NodeStatus.ERROR
             return False
     
+    def _monitor_node_errors(self, node_name, process):
+        """
+        Background thread to monitor node stderr for critical errors.
+        If critical errors are detected, marks the node as ERROR status.
+        """
+        critical_errors = [
+            'could not open port',
+            'permission denied',
+            'no such device',
+            'device not found',
+            'connection refused',
+            'failed to connect',
+            'cannot open',
+            'serial exception'
+        ]
+        
+        try:
+            # Read stderr line by line
+            for line in iter(process.stderr.readline, ''):
+                if not line:
+                    break
+                    
+                line_lower = line.lower()
+                
+                # Check for critical error indicators
+                for error_pattern in critical_errors:
+                    if error_pattern in line_lower:
+                        self.get_logger().error(f"Critical error detected in {node_name}: {line.strip()}")
+                        self.node_status[node_name] = NodeStatus.ERROR
+                        return
+                
+                # Also log all stderr output for debugging
+                if line.strip():
+                    self.get_logger().warn(f"{node_name} stderr: {line.strip()}")
+                    
+        except Exception as e:
+            self.get_logger().debug(f"Error monitor thread for {node_name} ended: {e}")
+    
     def stop_node(self, node_name):
-        """Stop a specific rover node"""
+        """Stop a specific rover node and all its child processes"""
         if node_name not in self.node_status:
             self.get_logger().error(f"Unknown node: {node_name}")
             return False
@@ -206,8 +270,56 @@ class RoverCommandCentre(Node):
             # Terminate the process if it exists
             if node_name in self.node_processes:
                 process = self.node_processes[node_name]
-                process.terminate()
-                process.wait(timeout=5)
+                
+                try:
+                    # Get the process and all its children using psutil
+                    parent = psutil.Process(process.pid)
+                    children = parent.children(recursive=True)
+                    
+                    # Log what we're killing
+                    self.get_logger().info(f"Stopping {node_name} (PID: {process.pid}) and {len(children)} child processes")
+                    
+                    # Send SIGTERM to parent and all children
+                    for child in children:
+                        try:
+                            self.get_logger().debug(f"Terminating child process: {child.pid}")
+                            child.terminate()
+                        except psutil.NoSuchProcess:
+                            pass
+                    
+                    parent.terminate()
+                    
+                    # Wait for processes to terminate gracefully
+                    gone, alive = psutil.wait_procs(children + [parent], timeout=3)
+                    
+                    # Force kill any remaining processes
+                    if alive:
+                        self.get_logger().warn(f"Force killing {len(alive)} processes that didn't terminate gracefully")
+                        for p in alive:
+                            try:
+                                self.get_logger().debug(f"Force killing process: {p.pid}")
+                                p.kill()
+                            except psutil.NoSuchProcess:
+                                pass
+                    
+                    # Final wait
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+                        
+                except psutil.NoSuchProcess:
+                    self.get_logger().warn(f"Process for {node_name} already terminated")
+                except Exception as e:
+                    self.get_logger().error(f"Error stopping process tree for {node_name}: {e}")
+                    # Fallback to simple terminate
+                    try:
+                        process.terminate()
+                        process.wait(timeout=3)
+                    except:
+                        process.kill()
+                
                 del self.node_processes[node_name]
                 
             self.node_status[node_name] = NodeStatus.OFFLINE
@@ -347,15 +459,21 @@ class RoverCommandCentre(Node):
         # List of all nodes to stop (excludes the communication node itself)
         nodes_to_stop = ['gps', 'imu', 'csi_camera_1', 'obstacle_detection', 'manual_control', 'motor_control']
         
+        # Stop all nodes regardless of their current status
+        # (they might be in ERROR or STARTING state but still have processes running)
         for node_name in nodes_to_stop:
-            if self.node_status[node_name] == NodeStatus.RUNNING:
-                self.get_logger().info(f"Stopping {node_name}")
-                self.stop_node(node_name)
-                time.sleep(0.5)  # Brief delay between stops
+            self.get_logger().info(f"Stopping {node_name} (current status: {self.node_status[node_name].value})")
+            self.stop_node(node_name)
+            time.sleep(0.3)  # Brief delay between stops
         
         # Ensure all movement is stopped
         self.stop_all_movement()
         
+        # Publish final node status
+        self.publish_node_status()
+        
+        self.get_logger().info("Stop complete - all rover nodes stopped, communication node remains active")
+        return True
         self.get_logger().info("Stop complete - all rover nodes stopped, communication node remains active")
         return True
     
