@@ -29,7 +29,7 @@ Startup:
 		a. colcon build --packages-select auto_nav
 		b. source install/setup.bash
 		c. ros2 run auto_nav gps_serial_driver
-		d. ros2 run auto_nav imu_serial_driver
+		d. ros2 run auto_nav rover_serial_bridge
 	
 	2. Start Waypoint client: ros2 run auto_nav gps_waypoint_client
 

@@ -31,6 +31,7 @@ setup(
             'gps_serial_driver = auto_nav.gps_serial_driver:main',
             'imu_serial_driver = auto_nav.imu_serial_driver:main',
             'gps_imu_to_odom = auto_nav.gps_imu_to_odom:main',
+            'rover_serial_bridge = auto_nav.rover_serial_bridge:main',
         ],
     },
 )
