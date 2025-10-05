@@ -94,6 +94,11 @@ class RoverCommandCentre(Node):
             
             self.get_logger().info(f"Received command: {command_type}")
             
+            # Reset heartbeat tracking when receiving any command
+            # Commands indicate the external software is active and connected
+            self.last_heartbeat = time.time()
+            self.num_heartbeats_missed = 0
+            
             if command_type == 'LaunchRover':
                 if (self.verify_rover_id(command_data)):  # verify rover ID before launching
                     self.launch_rover_autonomous()
@@ -115,6 +120,7 @@ class RoverCommandCentre(Node):
     def heartbeat_callback(self, msg):
         """Update heartbeat from external software"""
         self.last_heartbeat = time.time()
+        self.num_heartbeats_missed = 0  # Reset missed count on successful heartbeat
     
     def swdata_callback(self, msg):
         """Process software data and forward to appropriate rover nodes"""
