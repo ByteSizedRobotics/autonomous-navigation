@@ -271,26 +271,15 @@ class RoverCommandCentre(Node):
             # Define specific ROS2 node names that should be killed for each node type
             # This helps ensure we catch all related processes
             node_kill_targets = {
-                'obstacle_detection': ['rplidar_node', 'obstacle_detector'],
-                'csi_camera_1': ['csi_camera_inference', 'csi_camera_video'],
+                'obstacle_detection': ['rplidar_node', 'obstacle_detector', 'rplidar_composition'],
+                'csi_camera_1': ['csi_camera_inference', 'csi_camera_video', 'csi_camera_snapshot'],
                 'gps': ['gps_serial_driver'],
                 'imu': ['imu_serial_driver'],
                 'manual_control': ['wasd_control'],
                 'motor_control': ['serial_motor_node']
             }
             
-            # First, try to kill by ROS2 node names using pkill
-            if node_name in node_kill_targets:
-                for target_node in node_kill_targets[node_name]:
-                    try:
-                        self.get_logger().info(f"Killing ROS2 node: {target_node}")
-                        # Use pkill to find and kill processes by name
-                        subprocess.run(['pkill', '-9', '-f', target_node], 
-                                     capture_output=True, timeout=2)
-                    except Exception as e:
-                        self.get_logger().debug(f"pkill for {target_node} failed: {e}")
-            
-            # Terminate the process if it exists in our tracking
+            # Terminate the tracked process if it exists (this is the launch process)
             if node_name in self.node_processes:
                 process = self.node_processes[node_name]
                 
@@ -302,18 +291,32 @@ class RoverCommandCentre(Node):
                     # Log what we're killing
                     self.get_logger().info(f"Stopping {node_name} (PID: {process.pid}) and {len(children)} child processes")
                     
-                    # Send SIGKILL immediately to all children (more aggressive)
-                    for child in children:
-                        try:
-                            self.get_logger().debug(f"Force killing child process: {child.pid} ({child.name()})")
-                            child.kill()  # Changed from terminate() to kill()
-                        except psutil.NoSuchProcess:
-                            pass
-                        except Exception as e:
-                            self.get_logger().debug(f"Error killing child {child.pid}: {e}")
+                    # First, send SIGINT (like Ctrl+C) to give proper shutdown
+                    try:
+                        parent.send_signal(signal.SIGINT)
+                        self.get_logger().info(f"Sent SIGINT to {node_name} launch process")
+                        time.sleep(1)  # Give it a moment to shutdown gracefully
+                    except Exception as e:
+                        self.get_logger().debug(f"SIGINT failed: {e}")
                     
-                    # Force kill parent
-                    parent.kill()  # Changed from terminate() to kill()
+                    # Check if it's still alive
+                    if parent.is_running():
+                        # Send SIGKILL to all children first
+                        for child in children:
+                            try:
+                                if child.is_running():
+                                    self.get_logger().debug(f"Force killing child process: {child.pid} ({child.name()})")
+                                    child.kill()
+                            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                pass
+                            except Exception as e:
+                                self.get_logger().debug(f"Error killing child {child.pid}: {e}")
+                        
+                        # Force kill parent
+                        try:
+                            parent.kill()
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            pass
                     
                     # Wait for processes to die
                     gone, alive = psutil.wait_procs(children + [parent], timeout=2)
@@ -340,6 +343,37 @@ class RoverCommandCentre(Node):
                 
                 del self.node_processes[node_name]
             
+            # Kill by ROS2 node names using pkill (catches orphaned processes)
+            if node_name in node_kill_targets:
+                for target_node in node_kill_targets[node_name]:
+                    try:
+                        self.get_logger().info(f"Using pkill for: {target_node}")
+                        # Try exact name match
+                        subprocess.run(['pkill', '-9', target_node], 
+                                     capture_output=True, timeout=2)
+                        # Try pattern match in command line
+                        subprocess.run(['pkill', '-9', '-f', target_node], 
+                                     capture_output=True, timeout=2)
+                    except Exception as e:
+                        self.get_logger().debug(f"pkill for {target_node} failed: {e}")
+            
+            # Use psutil to find any remaining processes with matching names
+            try:
+                if node_name in node_kill_targets:
+                    for target_node in node_kill_targets[node_name]:
+                        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                            try:
+                                cmdline = ' '.join(proc.info['cmdline'] or [])
+                                proc_name = proc.info['name'] or ''
+                                
+                                if target_node in cmdline or target_node in proc_name:
+                                    self.get_logger().info(f"Killing remaining process: PID {proc.info['pid']}, Name: {proc_name}")
+                                    psutil.Process(proc.info['pid']).kill()
+                            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                                pass
+            except Exception as e:
+                self.get_logger().debug(f"psutil sweep failed: {e}")
+            
             # Give a moment for processes to clean up
             time.sleep(0.5)
                 
@@ -356,10 +390,11 @@ class RoverCommandCentre(Node):
         """
         Emergency function to kill ALL ROS2 nodes related to rover operations.
         This is more aggressive than stop_node and doesn't rely on tracked processes.
+        Uses multiple strategies to ensure processes are killed.
         """
         self.get_logger().warn("Emergency kill: Terminating all known rover ROS2 nodes")
         
-        # List of all possible ROS2 node executables that might be running
+        # Strategy 1: Kill by exact node executable names
         all_node_executables = [
             'rplidar_node',           # Lidar driver
             'obstacle_detector',      # Obstacle detection
@@ -369,20 +404,114 @@ class RoverCommandCentre(Node):
             'imu_serial_driver',      # IMU driver
             'wasd_control',           # Manual control
             'serial_motor_node',      # Motor control
+            'rplidar_composition',    # Alternative lidar node name
         ]
         
         for executable in all_node_executables:
             try:
-                result = subprocess.run(['pkill', '-9', '-f', executable], 
-                                      capture_output=True, 
-                                      timeout=2,
-                                      text=True)
-                if result.returncode == 0:
+                # Try multiple kill strategies
+                # First: exact name match
+                result1 = subprocess.run(['pkill', '-9', executable], 
+                                       capture_output=True, timeout=2, text=True)
+                # Second: partial match in command line
+                result2 = subprocess.run(['pkill', '-9', '-f', executable], 
+                                       capture_output=True, timeout=2, text=True)
+                
+                if result1.returncode == 0 or result2.returncode == 0:
                     self.get_logger().info(f"Killed processes matching: {executable}")
             except Exception as e:
-                self.get_logger().debug(f"pkill for {executable} returned: {e}")
+                self.get_logger().debug(f"pkill for {executable} failed: {e}")
+        
+        # Strategy 2: Kill all ROS2-related launch processes
+        # This catches the launch files that spawn the actual nodes
+        try:
+            self.get_logger().info("Killing ROS2 launch processes...")
+            subprocess.run(['pkill', '-9', '-f', 'ros2 launch.*obstacle_detection'], 
+                         capture_output=True, timeout=2)
+            subprocess.run(['pkill', '-9', '-f', 'ros2 launch.*csi_camera'], 
+                         capture_output=True, timeout=2)
+            subprocess.run(['pkill', '-9', '-f', 'obstacle_detector.launch.py'], 
+                         capture_output=True, timeout=2)
+            subprocess.run(['pkill', '-9', '-f', 'csi_camera_stream.launch.py'], 
+                         capture_output=True, timeout=2)
+        except Exception as e:
+            self.get_logger().debug(f"Launch file killing failed: {e}")
+        
+        # Strategy 3: Use psutil to find and kill any process with our target names
+        try:
+            killed_count = 0
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    cmdline = ' '.join(proc.info['cmdline'] or [])
+                    proc_name = proc.info['name'] or ''
+                    
+                    # Check if any of our target executables are in the command line or process name
+                    for target in all_node_executables:
+                        if target in cmdline or target in proc_name:
+                            self.get_logger().info(f"Killing process: PID {proc.info['pid']}, Name: {proc_name}, CMD: {cmdline[:100]}")
+                            proc.kill()
+                            killed_count += 1
+                            break
+                    
+                    # Also check for launch files
+                    if 'obstacle_detector.launch.py' in cmdline or 'csi_camera_stream.launch.py' in cmdline:
+                        self.get_logger().info(f"Killing launch file: PID {proc.info['pid']}")
+                        proc.kill()
+                        killed_count += 1
+                        
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            
+            if killed_count > 0:
+                self.get_logger().info(f"Killed {killed_count} processes using psutil")
+            else:
+                self.get_logger().warn("No processes found to kill - they may already be stopped")
+        except Exception as e:
+            self.get_logger().error(f"psutil cleanup failed: {e}")
         
         self.get_logger().info("Emergency kill complete")
+    
+    def diagnose_running_processes(self):
+        """
+        Diagnostic function to list all ROS2-related processes currently running.
+        Call this to debug what's still running after a stop command.
+        """
+        self.get_logger().info("=== DIAGNOSTIC: Listing all rover-related processes ===")
+        
+        keywords = ['rplidar', 'obstacle', 'camera', 'gps', 'imu', 'wasd', 'motor', 
+                   'ros2', 'launch', 'serial_driver']
+        
+        found_processes = []
+        try:
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+                try:
+                    cmdline = ' '.join(proc.info['cmdline'] or [])
+                    proc_name = proc.info['name'] or ''
+                    
+                    # Check if any keyword matches
+                    for keyword in keywords:
+                        if keyword in cmdline.lower() or keyword in proc_name.lower():
+                            found_processes.append({
+                                'pid': proc.info['pid'],
+                                'name': proc_name,
+                                'cmdline': cmdline[:150]  # Truncate for readability
+                            })
+                            break
+                            
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+            
+            if found_processes:
+                self.get_logger().warn(f"Found {len(found_processes)} rover-related processes still running:")
+                for p in found_processes:
+                    self.get_logger().info(f"  PID {p['pid']}: {p['name']} - {p['cmdline']}")
+            else:
+                self.get_logger().info("No rover-related processes found running")
+                
+        except Exception as e:
+            self.get_logger().error(f"Diagnostic failed: {e}")
+        
+        self.get_logger().info("=== END DIAGNOSTIC ===")
     
     def stop_all_nodes(self):
         """Stop all rover nodes"""
@@ -510,6 +639,9 @@ class RoverCommandCentre(Node):
         """Stop: Stop all rover nodes except the communication node"""
         self.get_logger().info("Stop command received - shutting down all rover nodes")
         
+        # Run diagnostic to see what's running before we stop
+        self.diagnose_running_processes()
+        
         # Set rover to idle state
         self.rover_state = RoverState.IDLE
         
@@ -526,6 +658,12 @@ class RoverCommandCentre(Node):
         # Emergency cleanup to catch any orphaned processes (especially lidar)
         self.get_logger().info("Running emergency cleanup to ensure all processes are terminated...")
         self.emergency_kill_all_ros_nodes()
+        
+        # Give processes time to die
+        time.sleep(1)
+        
+        # Run diagnostic again to see what's still running
+        self.diagnose_running_processes()
         
         # Ensure all movement is stopped
         self.stop_all_movement()
