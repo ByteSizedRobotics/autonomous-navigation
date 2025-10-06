@@ -16,8 +16,8 @@ class CSIVideoNode(Node):
         super().__init__('csi_video_node')
         
         # Get parameters
-        self.declare_parameter('width', 820)
-        self.declare_parameter('height', 616)
+        self.declare_parameter('width', 1280)
+        self.declare_parameter('height', 720)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
 
