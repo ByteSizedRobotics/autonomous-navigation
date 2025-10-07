@@ -168,7 +168,7 @@ class RoverCommandCentre(Node):
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
                 'manual_control': 'ros2 run potrider wasd_control',
-                'usb_camera': 'ros2 run csi_camera_stream usb_camera_video.launch.py'
+                'usb_camera': 'ros2 launch csi_camera_stream usb_camera_video.launch.py'
             }
             
             if node_name in launch_commands:
@@ -567,7 +567,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation
-        autonomous_nodes = ['rover', 'csi_camera_1', 'gps', 'obstacle_detection', 'usb_camera']
+        autonomous_nodes = ['usb_camera', 'csi_camera_1'] #'rover', 'csi_camera_1', 'gps', 'obstacle_detection', 
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
