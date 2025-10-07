@@ -163,12 +163,10 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 run auto_nav gps_serial_driver',
-                'imu': 'ros2 run auto_nav imu_serial_driver',
-                # TODO: LOUIS here we should startup autonav launch file to start all relevant driver NAV2 related nodes
+		        'rover': 'ros2 run auto_nav rover_serial_bridge',
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
-                'manual_control': 'ros2 run potrider wasd_control',
-                'motor_control': 'ros2 run potrider serial_motor_node --ros-args -p port:=/dev/rover_serial'
+                'manual_control': 'ros2 run potrider wasd_control'
             }
             
             if node_name in launch_commands:
@@ -280,9 +278,8 @@ class RoverCommandCentre(Node):
                 'obstacle_detection': ['rplidar_node', 'obstacle_detector', 'rplidar_composition'],
                 'csi_camera_1': ['csi_camera_inference', 'csi_camera_video', 'csi_camera_snapshot'],
                 'gps': ['gps_serial_driver'],
-                'imu': ['imu_serial_driver'],
-                'manual_control': ['wasd_control'],
-                'motor_control': ['serial_motor_node']
+                'rover': ['rover_serial_bridge'],
+                'manual_control': ['wasd_control']
             }
             
             # Terminate the tracked process if it exists (this is the launch process)
@@ -407,9 +404,8 @@ class RoverCommandCentre(Node):
             'csi_camera_inference',   # Camera inference
             'csi_camera_video',       # Camera video
             'gps_serial_driver',      # GPS driver
-            'imu_serial_driver',      # IMU driver
+            'rover_serial_bridge',      # IMU driver
             'wasd_control',           # Manual control
-            'serial_motor_node',      # Motor control
             'rplidar_composition',    # Alternative lidar node name
         ]
         
@@ -484,7 +480,7 @@ class RoverCommandCentre(Node):
         """
         self.get_logger().info("=== DIAGNOSTIC: Listing all rover-related processes ===")
         
-        keywords = ['rplidar', 'obstacle', 'camera', 'gps', 'imu', 'wasd', 'motor', 
+        keywords = ['rplidar', 'obstacle', 'camera', 'gps', 'rover', 'wasd', 
                    'ros2', 'launch', 'serial_driver']
         
         found_processes = []
@@ -567,7 +563,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation
-        autonomous_nodes = ['imu', 'csi_camera_1', 'gps', 'obstacle_detection', 'motor_control']
+        autonomous_nodes = ['rover', 'csi_camera_1', 'gps', 'obstacle_detection']
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -624,7 +620,7 @@ class RoverCommandCentre(Node):
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
         
         # Ensure manual control and motor control are running
-        manual_control_nodes = ['manual_control', 'motor_control', 'gps', 'obstacle_detection', 'csi_camera_1', 'imu']
+        manual_control_nodes = ['manual_control', 'gps', 'obstacle_detection', 'csi_camera_1', 'rover']
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -652,7 +648,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.IDLE
         
         # List of all nodes to stop (excludes the communication node itself)
-        nodes_to_stop = ['gps', 'imu', 'csi_camera_1', 'obstacle_detection', 'manual_control', 'motor_control']
+        nodes_to_stop = ['gps', 'rover', 'csi_camera_1', 'obstacle_detection', 'manual_control']
         
         # Stop all nodes regardless of their current status
         # (they might be in ERROR or STARTING state but still have processes running)
