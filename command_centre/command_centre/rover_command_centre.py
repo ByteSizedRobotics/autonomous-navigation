@@ -52,11 +52,11 @@ class RoverCommandCentre(Node):
         # Node status tracking
         self.node_status = {
             'gps': NodeStatus.OFFLINE,
-            'imu': NodeStatus.OFFLINE,
+            'rover': NodeStatus.OFFLINE,
             'csi_camera_1': NodeStatus.OFFLINE,
             'obstacle_detection': NodeStatus.OFFLINE,
             'manual_control': NodeStatus.OFFLINE,
-            'motor_control': NodeStatus.OFFLINE
+            # 'motor_control': NodeStatus.OFFLINE
         }        
         # System state
         self.rover_state = RoverState.IDLE
