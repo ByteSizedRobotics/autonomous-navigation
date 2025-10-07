@@ -27,7 +27,7 @@ class RoverSerialBridge(Node):
         )
 
         # --- Serial Setup ---
-        self.declare_parameter('port', '/dev/rover_serial')
+        self.declare_parameter('port', '/dev/ttyAMA0') # set to rover_serial for USB, ttyAMA0 for pins
         self.port = self.get_parameter('port').get_parameter_value().string_value
 
         try:
