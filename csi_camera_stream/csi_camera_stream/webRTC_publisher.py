@@ -34,7 +34,8 @@ class WebRTCPublisherNode(Node):
         self.bridge = CvBridge()
         self.current_frame = None
         
-        self.pc = None  # WebRTC peer connection
+        self.peer_connections = {}  # Track multiple WebRTC peer connections
+        self.connection_id = 0  # Counter for unique connection IDs
 
         self.get_logger().info(f"WebRTC publisher started")
         self.subscription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
@@ -69,49 +70,69 @@ class WebRTCPublisherNode(Node):
             return video_frame
 
     async def handle_offer(self, websocket, path=None):
+        conn_id = None
+        pc = None
         try:
             async for message in websocket:
                 self.get_logger().info(f"Received WebRTC message: {message}")  # Log incoming messages
 
                 data = json.loads(message)
                 if data.get("type") == "offer":
-                    self.get_logger().info("WebRTC offer received, processing...")
-
-                    # Close any existing peer connection
-                    if self.pc:
-                        await self.pc.close()
+                    # Create a new unique connection ID
+                    conn_id = self.connection_id
+                    self.connection_id += 1
                     
-                    self.pc = RTCPeerConnection()
+                    self.get_logger().info(f"WebRTC offer received for connection {conn_id}, processing...")
+                    
+                    # Create a new peer connection for this client
+                    pc = RTCPeerConnection()
+                    self.peer_connections[conn_id] = pc
+                    
+                    self.get_logger().info(f"Active connections: {len(self.peer_connections)}")
+                    
+                    # Add connection state change handler
+                    @pc.on("connectionstatechange")
+                    async def on_connectionstatechange():
+                        self.get_logger().info(f"Connection {conn_id} state: {pc.connectionState}")
+                        if pc.connectionState in ["failed", "closed"]:
+                            if conn_id in self.peer_connections:
+                                del self.peer_connections[conn_id]
+                                self.get_logger().info(f"Removed connection {conn_id}. Active connections: {len(self.peer_connections)}")
                     
                     # Add ICE candidate handling
-                    @self.pc.on("icecandidate")
+                    @pc.on("icecandidate")
                     async def on_ice_candidate(event):
                         if event.candidate:
-                            self.get_logger().info(f"Sending ICE candidate: {event.candidate.candidate}")
+                            self.get_logger().info(f"Sending ICE candidate for connection {conn_id}")
                             await websocket.send(json.dumps({
                                 "type": "ice-candidate", 
                                 "candidate": event.candidate.candidate
                             }))
                     
                     offer = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
-                    await self.pc.setRemoteDescription(offer)
+                    await pc.setRemoteDescription(offer)
                     
+                    # Create a new video track instance for this connection
                     video_track = self.ROSVideoTrack(self)
-                    self.pc.addTrack(video_track)
+                    pc.addTrack(video_track)
                     
-                    answer = await self.pc.createAnswer()
-                    await self.pc.setLocalDescription(answer)
+                    answer = await pc.createAnswer()
+                    await pc.setLocalDescription(answer)
                     
-                    self.get_logger().info("Sending WebRTC answer")
+                    self.get_logger().info(f"Sending WebRTC answer for connection {conn_id}")
                     await websocket.send(json.dumps({
                         "type": "answer", 
-                        "sdp": self.pc.localDescription.sdp
+                        "sdp": pc.localDescription.sdp
                     }))
         except Exception as e:
             self.get_logger().error(f"WebRTC signaling error: {e}")
         finally:
-            if self.pc:
-                await self.pc.close()
+            # Clean up this specific connection
+            if conn_id is not None and conn_id in self.peer_connections:
+                pc = self.peer_connections[conn_id]
+                await pc.close()
+                del self.peer_connections[conn_id]
+                self.get_logger().info(f"Cleaned up connection {conn_id}. Active connections: {len(self.peer_connections)}")
 
     async def start_webrtc_server(self):
         server = await websockets.serve(self.handle_offer, "0.0.0.0", 8765)

@@ -183,7 +183,7 @@ class RoverCommandCentre(Node):
                 
                 # Give the node more time to start up and potentially fail if hardware is missing
                 # Hardware-dependent nodes (GPS, IMU) typically fail within 2-3 seconds
-                time.sleep(3)
+                time.sleep(1)
                 
                 # Check if process has already exited
                 exit_code = process.poll()
