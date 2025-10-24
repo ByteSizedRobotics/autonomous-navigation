@@ -61,7 +61,11 @@ class USBVideoNode(Node):
             self.get_logger().error(f"Failed to open USB camera device {self.camera_device}")
             return
         
-        # Set camera properties
+        # IMPORTANT: Set FOURCC to MJPEG FIRST before setting resolution!
+        # This is critical for getting 30 FPS at 1280x720
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
+        
+        # Now set camera properties
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         cap.set(cv2.CAP_PROP_FPS, self.fps)
@@ -74,7 +78,12 @@ class USBVideoNode(Node):
         actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         actual_fps = cap.get(cv2.CAP_PROP_FPS)
         
+        # Get the actual FOURCC to verify MJPEG is being used
+        fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+        fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
+        
         self.get_logger().info(f"USB Camera opened successfully on device {self.camera_device}")
+        self.get_logger().info(f"Format: {fourcc_str}")
         self.get_logger().info(f"Resolution: {actual_width}x{actual_height} @ {actual_fps} FPS")
         
         # Update camera info if actual dimensions differ
@@ -110,6 +119,11 @@ class USBVideoNode(Node):
                         if not cap.isOpened():
                             self.get_logger().error("Failed to reconnect to camera")
                             break
+                        # Re-apply MJPEG codec after reconnection
+                        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+                        cap.set(cv2.CAP_PROP_FPS, self.fps)
                         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                         consecutive_failures = 0
                     else:
