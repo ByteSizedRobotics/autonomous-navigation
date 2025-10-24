@@ -54,8 +54,8 @@ class USBVideoNode(Node):
         self.run()
     
     def run(self):
-        # Open USB camera using OpenCV
-        cap = cv2.VideoCapture(self.camera_device)
+        # Open USB camera using OpenCV with V4L2 backend for better performance
+        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
         
         if not cap.isOpened():
             self.get_logger().error(f"Failed to open USB camera device {self.camera_device}")
@@ -65,6 +65,9 @@ class USBVideoNode(Node):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         cap.set(cv2.CAP_PROP_FPS, self.fps)
+        
+        # Set buffer size to 1 to avoid reading old frames
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         # Get actual camera properties (may differ from requested)
         actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -86,14 +89,35 @@ class USBVideoNode(Node):
             self.camera_info_msg.p = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
         
         frame_count = 0
+        consecutive_failures = 0
+        max_consecutive_failures = 10
         
         try:
             while rclpy.ok():
+                # Spin once to process callbacks
+                rclpy.spin_once(self, timeout_sec=0.0)
+                
                 ret, frame = cap.read()
                 if not ret:
-                    self.get_logger().warn("Failed to capture frame")
-                    time.sleep(0.1)  # Short delay to prevent tight looping
+                    consecutive_failures += 1
+                    self.get_logger().warn(f"Failed to capture frame (consecutive failures: {consecutive_failures})")
+                    
+                    if consecutive_failures >= max_consecutive_failures:
+                        self.get_logger().error("Too many consecutive frame capture failures. Attempting to reconnect...")
+                        cap.release()
+                        time.sleep(1.0)
+                        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
+                        if not cap.isOpened():
+                            self.get_logger().error("Failed to reconnect to camera")
+                            break
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        consecutive_failures = 0
+                    else:
+                        time.sleep(0.01)  # Short delay to prevent tight looping
                     continue
+                
+                # Reset failure counter on successful frame
+                consecutive_failures = 0
                 
                 now = self.get_clock().now().to_msg()
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
