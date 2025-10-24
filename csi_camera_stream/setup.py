@@ -24,9 +24,9 @@ setup(
     entry_points={
         'console_scripts': ['csi_camera_video = csi_camera_stream.csi_camera_video:main',
                             'csi_camera_inference = csi_camera_stream.csi_camera_inference:main',
-                            'webRTC_publisher = csi_camera_stream.webRTC_publisher:main',
-                            'usb_camera_video = csi_camera_stream.usb_camera_video:main',
-                            'usb_webRTC_publisher = csi_camera_stream.usb_webRTC_publisher:main'],
+                            'webRTC_publisher = csi_camera_stream.webRTC_publisher:main'],
+                            # 'usb_camera_video = csi_camera_stream.usb_camera_video:main',
+                            # 'usb_webRTC_publisher = csi_camera_stream.usb_webRTC_publisher:main'],
 
     },
 )

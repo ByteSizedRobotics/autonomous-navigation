@@ -46,7 +46,14 @@ def generate_launch_description():
             output='screen',
             parameters=[nav2_param_file]
         ),
-
+        
+        Node(
+            package='nav2_recoveries',
+            executable='recoveries_server',
+            name='recoveries_server',
+            output='screen'
+        ),
+        
         Node(
             package='nav2_bt_navigator',
             executable='bt_navigator',
