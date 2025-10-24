@@ -2,7 +2,7 @@ import rclpy
 import sys
 import numpy as np
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
 import threading
 
@@ -22,15 +22,23 @@ class USBWebRTCPublisherNode(Node):
         super().__init__("usb_webrtc_publisher")
         
         # Parameters
-        self.declare_parameter("video_topic", "usb_video_stream")  # USB video stream topic
+        self.declare_parameter("video_topic", "usb_video_stream/compressed")  # USB compressed video stream topic
 
         self.bridge = CvBridge()
         self.current_frame = None
         
         self.pc = None  # WebRTC peer connection
 
-        self.get_logger().info(f"USB WebRTC publisher started")
-        self.subscription = self.create_subscription(Image, 'usb_video_stream', self.video_callback, 10)
+        video_topic = self.get_parameter("video_topic").value
+        self.get_logger().info(f"USB WebRTC publisher started, subscribing to: {video_topic}")
+        
+        # Subscribe to compressed image topic
+        self.subscription = self.create_subscription(
+            CompressedImage, 
+            video_topic, 
+            self.video_callback, 
+            10
+        )
         
         # Start WebRTC in a separate thread
         self.loop = asyncio.new_event_loop()
@@ -41,7 +49,9 @@ class USBWebRTCPublisherNode(Node):
         self.loop.run_until_complete(self.start_webrtc_server())
     
     def video_callback(self, msg):
-        self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        # Decode compressed JPEG image
+        np_arr = np.frombuffer(msg.data, np.uint8)
+        self.current_frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         
     def get_current_frame(self):
         frame = self.current_frame
@@ -51,7 +61,7 @@ class USBWebRTCPublisherNode(Node):
         def __init__(self, publisher_node):
             super().__init__()
             self.publisher_node = publisher_node
-            self.default_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+            self.default_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         
         async def recv(self):
             frame_data = self.publisher_node.get_current_frame()

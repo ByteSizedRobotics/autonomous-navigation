@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import sys
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
 from cv_bridge import CvBridge
 
 sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
@@ -13,20 +13,23 @@ class USBVideoNode(Node):
         super().__init__('usb_video_node')
         
         # Get parameters
-        self.declare_parameter('width', 1280)
-        self.declare_parameter('height', 720)
+        self.declare_parameter('width', 640)
+        self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
-        self.declare_parameter('camera_device', 0)  # Default to /dev/video0
+        self.declare_parameter('camera_device', 8)  # Default to /dev/video8
+        self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
         self.camera_device = self.get_parameter('camera_device').value
+        self.jpeg_quality = self.get_parameter('jpeg_quality').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'usb_video_stream', 1)
+        self.compressed_pub = self.create_publisher(CompressedImage, 'usb_video_stream/compressed', 1)
         self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 1)
         
         # Create bridge for OpenCV to ROS conversion
@@ -54,25 +57,38 @@ class USBVideoNode(Node):
         self.run()
     
     def run(self):
-        # Open USB camera using OpenCV
-        cap = cv2.VideoCapture(self.camera_device)
+        # Open USB camera using OpenCV with V4L2 backend for better performance
+        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
         
         if not cap.isOpened():
             self.get_logger().error(f"Failed to open USB camera device {self.camera_device}")
             return
         
-        # Set camera properties
+        # IMPORTANT: Set FOURCC to MJPEG FIRST before setting resolution!
+        # This is critical for getting 30 FPS at 1280x720
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
+        
+        # Now set camera properties
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         cap.set(cv2.CAP_PROP_FPS, self.fps)
+        
+        # Set buffer size to 1 to avoid reading old frames
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         
         # Get actual camera properties (may differ from requested)
         actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         actual_fps = cap.get(cv2.CAP_PROP_FPS)
         
+        # Get the actual FOURCC to verify MJPEG is being used
+        fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
+        fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
+        
         self.get_logger().info(f"USB Camera opened successfully on device {self.camera_device}")
+        self.get_logger().info(f"Format: {fourcc_str}")
         self.get_logger().info(f"Resolution: {actual_width}x{actual_height} @ {actual_fps} FPS")
+        self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
         
         # Update camera info if actual dimensions differ
         if actual_width != self.width or actual_height != self.height:
@@ -86,23 +102,62 @@ class USBVideoNode(Node):
             self.camera_info_msg.p = [fx, 0, cx, 0, 0, fy, cy, 0, 0, 0, 1, 0]
         
         frame_count = 0
+        consecutive_failures = 0
+        max_consecutive_failures = 10
+        
+        # JPEG compression parameters
+        jpeg_params = [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality]
         
         try:
             while rclpy.ok():
+                # Spin once to process callbacks
+                rclpy.spin_once(self, timeout_sec=0.0)
+                
                 ret, frame = cap.read()
                 if not ret:
-                    self.get_logger().warn("Failed to capture frame")
-                    time.sleep(0.1)  # Short delay to prevent tight looping
+                    consecutive_failures += 1
+                    self.get_logger().warn(f"Failed to capture frame (consecutive failures: {consecutive_failures})")
+                    
+                    if consecutive_failures >= max_consecutive_failures:
+                        self.get_logger().error("Too many consecutive frame capture failures. Attempting to reconnect...")
+                        cap.release()
+                        time.sleep(1.0)
+                        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
+                        if not cap.isOpened():
+                            self.get_logger().error("Failed to reconnect to camera")
+                            break
+                        # Re-apply MJPEG codec after reconnection
+                        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M','J','P','G'))
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
+                        cap.set(cv2.CAP_PROP_FPS, self.fps)
+                        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+                        consecutive_failures = 0
+                    else:
+                        time.sleep(0.01)  # Short delay to prevent tight looping
                     continue
                 
+                # Reset failure counter on successful frame
+                consecutive_failures = 0
+                
                 now = self.get_clock().now().to_msg()
+                
+                # Publish raw image
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
                 img_msg.header.stamp = now
                 img_msg.header.frame_id = self.camera_frame_id
+                self.image_pub.publish(img_msg)
+                
+                # Publish compressed image (for WebRTC)
+                _, jpeg_buffer = cv2.imencode('.jpg', frame, jpeg_params)
+                compressed_msg = CompressedImage()
+                compressed_msg.header.stamp = now
+                compressed_msg.header.frame_id = self.camera_frame_id
+                compressed_msg.format = "jpeg"
+                compressed_msg.data = jpeg_buffer.tobytes()
+                self.compressed_pub.publish(compressed_msg)
                 
                 self.camera_info_msg.header.stamp = now
-                
-                self.image_pub.publish(img_msg)
                 self.camera_info_pub.publish(self.camera_info_msg)
                 
                 frame_count += 1

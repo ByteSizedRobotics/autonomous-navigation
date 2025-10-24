@@ -17,18 +17,28 @@ def generate_launch_description():
 
     camera_node_name = 'csi_camera_video'
 
-    # Camera node launch action
+    # Camera node launch action with optimized parameters
     camera_node = launch_ros.actions.Node(
         package='csi_camera_stream',
         executable=camera_node_name,
         name=camera_node_name,
+        parameters=[{
+            'width': 1280,
+            'height': 720,
+            'fps': 30,
+            'jpeg_quality': 70,
+            'camera_frame_id': 'csi_camera'
+        }]
     )
 
-    # WebRTC publisher node launch action
+    # WebRTC publisher node launch action with compressed stream
     webrtc_node = launch_ros.actions.Node(
         package='csi_camera_stream',
         executable='webRTC_publisher',
         name='webRTC_publisher',
+        parameters=[{
+            'video_topic': 'csi_video_stream/compressed'
+        }]
     )
 
     # Construct the launch description
