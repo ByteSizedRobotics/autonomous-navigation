@@ -17,7 +17,7 @@ class USBVideoNode(Node):
         self.declare_parameter('height', 720)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
-        self.declare_parameter('camera_device', 0)  # Default to /dev/video0
+        self.declare_parameter('camera_device', 8)  # Default to /dev/video0
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
