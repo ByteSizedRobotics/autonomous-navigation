@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import sys
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
 from cv_bridge import CvBridge
 
 sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
@@ -13,20 +13,23 @@ class USBVideoNode(Node):
         super().__init__('usb_video_node')
         
         # Get parameters
-        self.declare_parameter('width', 1280)
-        self.declare_parameter('height', 720)
+        self.declare_parameter('width', 640)
+        self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
-        self.declare_parameter('camera_device', 8)  # Default to /dev/video0
+        self.declare_parameter('camera_device', 8)  # Default to /dev/video8
+        self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
         self.camera_device = self.get_parameter('camera_device').value
+        self.jpeg_quality = self.get_parameter('jpeg_quality').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'usb_video_stream', 1)
+        self.compressed_pub = self.create_publisher(CompressedImage, 'usb_video_stream/compressed', 1)
         self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 1)
         
         # Create bridge for OpenCV to ROS conversion
@@ -85,6 +88,7 @@ class USBVideoNode(Node):
         self.get_logger().info(f"USB Camera opened successfully on device {self.camera_device}")
         self.get_logger().info(f"Format: {fourcc_str}")
         self.get_logger().info(f"Resolution: {actual_width}x{actual_height} @ {actual_fps} FPS")
+        self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
         
         # Update camera info if actual dimensions differ
         if actual_width != self.width or actual_height != self.height:
@@ -100,6 +104,9 @@ class USBVideoNode(Node):
         frame_count = 0
         consecutive_failures = 0
         max_consecutive_failures = 10
+        
+        # JPEG compression parameters
+        jpeg_params = [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality]
         
         try:
             while rclpy.ok():
@@ -134,13 +141,23 @@ class USBVideoNode(Node):
                 consecutive_failures = 0
                 
                 now = self.get_clock().now().to_msg()
+                
+                # Publish raw image
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
                 img_msg.header.stamp = now
                 img_msg.header.frame_id = self.camera_frame_id
+                self.image_pub.publish(img_msg)
+                
+                # Publish compressed image (for WebRTC)
+                _, jpeg_buffer = cv2.imencode('.jpg', frame, jpeg_params)
+                compressed_msg = CompressedImage()
+                compressed_msg.header.stamp = now
+                compressed_msg.header.frame_id = self.camera_frame_id
+                compressed_msg.format = "jpeg"
+                compressed_msg.data = jpeg_buffer.tobytes()
+                self.compressed_pub.publish(compressed_msg)
                 
                 self.camera_info_msg.header.stamp = now
-                
-                self.image_pub.publish(img_msg)
                 self.camera_info_pub.publish(self.camera_info_msg)
                 
                 frame_count += 1

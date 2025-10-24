@@ -14,11 +14,12 @@ def generate_launch_description():
         executable='usb_camera_video',
         name='usb_camera_video',
         parameters=[{
-            'width': 1280,
-            'height': 720,
+            'width': 640,
+            'height': 480,
             'fps': 30,
+            'jpeg_quality': 70,
             'camera_frame_id': 'usb_camera',
-            'camera_device': 8  # /dev/video0, can be changed to 2, 4, etc.
+            'camera_device': 8  # /dev/video8 for USB camera
         }]
     )
 
@@ -28,7 +29,7 @@ def generate_launch_description():
         executable='usb_webRTC_publisher',
         name='usb_webRTC_publisher',
         parameters=[{
-            'video_topic': 'usb_video_stream'
+            'video_topic': 'usb_video_stream/compressed'
         }]
     )
 
