@@ -18,7 +18,7 @@ def generate_launch_description():
             'height': 720,
             'fps': 30,
             'camera_frame_id': 'usb_camera',
-            'camera_device': 0  # /dev/video0, can be changed to 2, 4, etc.
+            'camera_device': 8  # /dev/video0, can be changed to 2, 4, etc.
         }]
     )
 
