@@ -4,7 +4,7 @@ import sys
 import os
 import subprocess as sp
 import shlex
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
 from cv_bridge import CvBridge
 
 sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
@@ -20,14 +20,17 @@ class CSIVideoNode(Node):
         self.declare_parameter('height', 720)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
+        self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
+        self.jpeg_quality = self.get_parameter('jpeg_quality').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'csi_video_stream', 1)
+        self.compressed_pub = self.create_publisher(CompressedImage, 'csi_video_stream/compressed', 1)
         self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 1)
         
         # Create bridge for OpenCV to ROS conversion
@@ -63,8 +66,9 @@ class CSIVideoNode(Node):
             os.remove(fifo_path)
         os.mkfifo(fifo_path)
 
-        # Start libcamera-vid process without preview (remove --nopreview to see camera stream)
-        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --inline -o {fifo_path} --nopreview"
+        # Start libcamera-vid process with optimized settings
+        # Using MJPEG codec with quality control for better performance
+        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --quality {self.jpeg_quality} --inline -o {fifo_path} --nopreview"
         process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe
@@ -77,7 +81,9 @@ class CSIVideoNode(Node):
             os.remove(fifo_path)
             return
         
-        self.get_logger().info("Camera opened successfully using libcamera")
+        self.get_logger().info(f"CSI Camera opened successfully using libcamera")
+        self.get_logger().info(f"Resolution: {self.width}x{self.height} @ {self.fps} FPS")
+        self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
         
         # Debugging: Check video capture properties
         # self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
@@ -85,14 +91,43 @@ class CSIVideoNode(Node):
         # self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
         
         frame_count = 0
+        consecutive_failures = 0
+        max_consecutive_failures = 10
+        
+        # JPEG compression parameters for additional compression
+        jpeg_params = [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality]
         
         try:
             while rclpy.ok():
+                # Spin once to process callbacks
+                rclpy.spin_once(self, timeout_sec=0.0)
+                
                 ret, frame = cap.read()
                 if not ret:
-                    self.get_logger().warn("Failed to capture frame")
-                    time.sleep(0.1)  # Short delay to prevent tight looping
+                    consecutive_failures += 1
+                    if consecutive_failures <= 3:
+                        self.get_logger().warn(f"Failed to capture frame (consecutive failures: {consecutive_failures})")
+                    
+                    if consecutive_failures >= max_consecutive_failures:
+                        self.get_logger().error("Too many consecutive failures. Restarting camera...")
+                        cap.release()
+                        process.terminate()
+                        process.wait()
+                        time.sleep(1.0)
+                        
+                        # Restart libcamera process
+                        process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
+                        cap = cv2.VideoCapture(fifo_path)
+                        if not cap.isOpened():
+                            self.get_logger().error("Failed to restart camera")
+                            break
+                        consecutive_failures = 0
+                    else:
+                        time.sleep(0.01)
                     continue
+                
+                # Reset failure counter on successful frame
+                consecutive_failures = 0
                 
                 # Debugging: Add frame count and timestamp to image
                 # cv2.putText(frame, 
@@ -108,13 +143,23 @@ class CSIVideoNode(Node):
                 # cv2.waitKey(1)  # Small delay to update window
                 
                 now = self.get_clock().now().to_msg()
+                
+                # Publish raw image
                 img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
                 img_msg.header.stamp = now
                 img_msg.header.frame_id = self.camera_frame_id
+                self.image_pub.publish(img_msg)
+                
+                # Publish compressed image (for WebRTC)
+                _, jpeg_buffer = cv2.imencode('.jpg', frame, jpeg_params)
+                compressed_msg = CompressedImage()
+                compressed_msg.header.stamp = now
+                compressed_msg.header.frame_id = self.camera_frame_id
+                compressed_msg.format = "jpeg"
+                compressed_msg.data = jpeg_buffer.tobytes()
+                self.compressed_pub.publish(compressed_msg)
                 
                 self.camera_info_msg.header.stamp = now
-                
-                self.image_pub.publish(img_msg)
                 self.camera_info_pub.publish(self.camera_info_msg)
                 
                 frame_count += 1
@@ -129,9 +174,11 @@ class CSIVideoNode(Node):
             cap.release()
             process.terminate()
             process.wait()
+            if os.path.exists(fifo_path):
+                os.remove(fifo_path)
             cv2.destroyAllWindows()
             self.get_logger().info(f"Captured {frame_count} frames")
-            self.get_logger().info("Camera node stopped")
+            self.get_logger().info("CSI Camera node stopped")
 
 def main(args=None):
     rclpy.init(args=args)

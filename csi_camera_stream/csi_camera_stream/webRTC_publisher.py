@@ -2,7 +2,7 @@ import rclpy
 import sys
 import numpy as np
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 from cv_bridge import CvBridge
 import threading
 
@@ -22,14 +22,7 @@ class WebRTCPublisherNode(Node):
         super().__init__("webrtc_publisher")
         
         # Parameters
-        # self.declare_parameter("still_interval", 5.0)  # seconds for pictures
-        self.declare_parameter("video_topic", "csi_video_stream") # video stream topic
-        # self.declare_parameter("still_topic", "csi_picture") # TODO: need to update these topics with actual name
-        # self.declare_parameter("inference_topic", "detected_pothole_frames")
-
-        #self.still_interval = self.get_parameter("still_interval").value
-        #self.still_topic = self.get_parameter("still_topic").value
-        #self.inference_topic = self.get_parameter("inference_topic").value
+        self.declare_parameter("video_topic", "csi_video_stream/compressed")  # Compressed video stream topic
 
         self.bridge = CvBridge()
         self.current_frame = None
@@ -37,8 +30,16 @@ class WebRTCPublisherNode(Node):
         self.peer_connections = {}  # Track multiple WebRTC peer connections
         self.connection_id = 0  # Counter for unique connection IDs
 
-        self.get_logger().info(f"WebRTC publisher started")
-        self.subscription = self.create_subscription(Image, 'csi_video_stream', self.video_callback, 10)
+        video_topic = self.get_parameter("video_topic").value
+        self.get_logger().info(f"WebRTC publisher started, subscribing to: {video_topic}")
+        
+        # Subscribe to compressed image topic
+        self.subscription = self.create_subscription(
+            CompressedImage,
+            video_topic,
+            self.video_callback,
+            10
+        )
         
         # Start WebRTC in a separate thread
         self.loop = asyncio.new_event_loop()
@@ -49,7 +50,9 @@ class WebRTCPublisherNode(Node):
         self.loop.run_until_complete(self.start_webrtc_server())
     
     def video_callback(self, msg):
-        self.current_frame = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+        # Decode compressed JPEG image
+        np_arr = np.frombuffer(msg.data, np.uint8)
+        self.current_frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         
     def get_current_frame(self):
         frame = self.current_frame
@@ -59,7 +62,7 @@ class WebRTCPublisherNode(Node):
         def __init__(self, publisher_node):
             super().__init__()
             self.publisher_node = publisher_node
-            self.default_frame = np.zeros((1232, 1640, 3), dtype=np.uint8)
+            self.default_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
         
         async def recv(self):
             frame_data = self.publisher_node.get_current_frame()
