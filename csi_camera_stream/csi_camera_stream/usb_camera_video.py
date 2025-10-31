@@ -17,7 +17,7 @@ class USBVideoNode(Node):
         self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
-        self.declare_parameter('camera_device', 8)  # Default to /dev/video8
+        self.declare_parameter('camera_device', '/dev/USB_camera')  # Default to /dev/video8
         self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
 
         self.width = self.get_parameter('width').value
@@ -26,6 +26,13 @@ class USBVideoNode(Node):
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
         self.camera_device = self.get_parameter('camera_device').value
         self.jpeg_quality = self.get_parameter('jpeg_quality').value
+        
+        # Convert camera_device parameter to appropriate type for OpenCV
+        # OpenCV VideoCapture accepts both int (device index) and str (device path)
+        if isinstance(self.camera_device, str):
+            self.device_path = self.camera_device
+        else:
+            self.device_path = self.camera_device
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'usb_video_stream', 1)
@@ -58,10 +65,10 @@ class USBVideoNode(Node):
     
     def run(self):
         # Open USB camera using OpenCV with V4L2 backend for better performance
-        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
+        cap = cv2.VideoCapture(self.device_path, cv2.CAP_V4L2)
         
         if not cap.isOpened():
-            self.get_logger().error(f"Failed to open USB camera device {self.camera_device}")
+            self.get_logger().error(f"Failed to open USB camera device {self.device_path}")
             return
         
         # IMPORTANT: Set FOURCC to MJPEG FIRST before setting resolution!
@@ -85,7 +92,7 @@ class USBVideoNode(Node):
         fourcc = int(cap.get(cv2.CAP_PROP_FOURCC))
         fourcc_str = "".join([chr((fourcc >> 8 * i) & 0xFF) for i in range(4)])
         
-        self.get_logger().info(f"USB Camera opened successfully on device {self.camera_device}")
+        self.get_logger().info(f"USB Camera opened successfully on device {self.device_path}")
         self.get_logger().info(f"Format: {fourcc_str}")
         self.get_logger().info(f"Resolution: {actual_width}x{actual_height} @ {actual_fps} FPS")
         self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
@@ -122,7 +129,7 @@ class USBVideoNode(Node):
                         self.get_logger().error("Too many consecutive frame capture failures. Attempting to reconnect...")
                         cap.release()
                         time.sleep(1.0)
-                        cap = cv2.VideoCapture(self.camera_device, cv2.CAP_V4L2)
+                        cap = cv2.VideoCapture(self.device_path, cv2.CAP_V4L2)
                         if not cap.isOpened():
                             self.get_logger().error("Failed to reconnect to camera")
                             break

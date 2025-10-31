@@ -19,7 +19,7 @@ def generate_launch_description():
             'fps': 30,
             'jpeg_quality': 70,
             'camera_frame_id': 'usb_camera',
-            'camera_device': 8  # /dev/video8 for USB camera
+            'camera_device': '/dev/USB_camera'  # Can be int (e.g., 8) or path (e.g., '/dev/USB_camera')
         }]
     )
 
