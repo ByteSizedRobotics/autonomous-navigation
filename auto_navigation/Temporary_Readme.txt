@@ -37,7 +37,9 @@ Startup:
 
 	3. Run Nav2 waypoint follower: ros2 run nav2_waypoint_follower waypoint_follower
 	
+	// WIP
 	
+	ros2 launch auto_nav nav2_outdoor.launch.py
 	
 ==========
 temp:

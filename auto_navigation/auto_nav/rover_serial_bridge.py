@@ -25,6 +25,7 @@ class RoverSerialBridge(Node):
             self.listener_callback,
             10
         )
+        self.create_subscription(Twist, '/cmd_vel', self.cmdvel_callback, 10)
 
         # --- Serial Setup ---
         self.declare_parameter('port', '/dev/ttyAMA0') # set to rover_serial for USB, ttyAMA0 for pins
@@ -86,6 +87,20 @@ class RoverSerialBridge(Node):
         """Enable IMU feedback stream from rover."""
         self.send_command({"T": 131, "cmd": 1})   # enable feedback
         self.send_command({"T": 142, "cmd": 20})  # 20 ms interval (50 Hz)
+    
+    def cmdvel_callback(self, msg):
+    # Convert Twist to JSON
+    cmd = {
+        "forward": msg.linear.x,
+        "lateral": msg.linear.y,
+        "angular": msg.angular.z
+    }
+    json_data = json.dumps(cmd)
+    try:
+        self.ser.write((json_data + '\n').encode('utf-8'))
+        self.get_logger().info(f"Sent: {json_data}")
+    except serial.SerialException as e:
+        self.get_logger().error(f"Serial write failed: {e}")
 
     def read_serial(self):
         """Continuously read from rover serial (IMU + any responses)."""
