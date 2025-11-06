@@ -22,9 +22,6 @@ class GPSWaypointNavClient(Node):
         self._action_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
 
         # Subscriber to continuous GPS waypoint stream
-        # Example message options:
-        #   - Float64MultiArray(data=[lat, lon])
-        #   - geometry_msgs/Point(x=lat, y=lon)
         self.subscription = self.create_subscription(
             Float64MultiArray,           # or Point if you prefer
             '/gps_waypoints',
