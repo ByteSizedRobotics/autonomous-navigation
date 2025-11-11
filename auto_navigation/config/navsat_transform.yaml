@@ -11,7 +11,7 @@ imu_topic: /imu/data
 gps_topic: /fix
 odometry_topic: /odometry/filtered
 # This will be published by navsat_transform_node
-gps_odom_topic: /odometry/gps
+gps_odom_topic: /odom
 
 # Behavior
 magnetic_declination_radians: 0.0

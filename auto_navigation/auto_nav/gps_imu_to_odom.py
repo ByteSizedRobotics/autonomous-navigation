@@ -15,7 +15,7 @@ class GPSIMUtoOdom(Node):
         self.create_subscription(Imu, '/imu/data', self.imu_callback, 50)
 
         # Publisher
-        self.odom_pub = self.create_publisher(Odometry, '/odometry/gps', 10)
+        self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
 
         # Latest readings
         self.lat = None

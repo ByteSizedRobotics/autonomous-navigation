@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot name="wave_rover">
+
+  <!-- Base -->
+  <link name="base_link"/>
+
+  <!-- IMU -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>
+  </joint>
+
+  <!-- GPS -->
+  <link name="gps_link"/>
+  <joint name="gps_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+    <origin xyz="0.1 0 0.1" rpy="0 0 0"/>
+  </joint>
+
+  <!-- LiDAR -->
+  <link name="lidar_link"/>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.1" rpy="0 0 0"/>
+  </joint>
+
+</robot>
+

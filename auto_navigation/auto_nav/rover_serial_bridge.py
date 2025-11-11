@@ -89,18 +89,18 @@ class RoverSerialBridge(Node):
         self.send_command({"T": 142, "cmd": 20})  # 20 ms interval (50 Hz)
     
     def cmdvel_callback(self, msg):
-    # Convert Twist to JSON
-    cmd = {
-        "forward": msg.linear.x,
-        "lateral": msg.linear.y,
-        "angular": msg.angular.z
-    }
-    json_data = json.dumps(cmd)
-    try:
-        self.ser.write((json_data + '\n').encode('utf-8'))
-        self.get_logger().info(f"Sent: {json_data}")
-    except serial.SerialException as e:
-        self.get_logger().error(f"Serial write failed: {e}")
+        # Convert Twist to JSON
+        cmd = {
+            "forward": msg.linear.x,
+            "lateral": msg.linear.y,
+            "angular": msg.angular.z
+        }
+        json_data = json.dumps(cmd)
+        try:
+            self.ser.write((json_data + '\n').encode('utf-8'))
+            self.get_logger().info(f"Sent: {json_data}")
+        except serial.SerialException as e:
+            self.get_logger().error(f"Serial write failed: {e}")
 
     def read_serial(self):
         """Continuously read from rover serial (IMU + any responses)."""
