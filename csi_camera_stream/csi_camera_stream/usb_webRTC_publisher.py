@@ -23,14 +23,17 @@ class USBWebRTCPublisherNode(Node):
         
         # Parameters
         self.declare_parameter("video_topic", "usb_video_stream/compressed")  # USB compressed video stream topic
+        self.declare_parameter("webrtc_port", 8766)  # WebRTC signaling server port
 
         self.bridge = CvBridge()
+        self.webrtc_port = self.get_parameter("webrtc_port").value
         self.current_frame = None
         
         self.pc = None  # WebRTC peer connection
 
         video_topic = self.get_parameter("video_topic").value
         self.get_logger().info(f"USB WebRTC publisher started, subscribing to: {video_topic}")
+        self.get_logger().info(f"USB WebRTC signaling server will start on port: {self.webrtc_port}")
         
         # Subscribe to compressed image topic
         self.subscription = self.create_subscription(
@@ -117,8 +120,8 @@ class USBWebRTCPublisherNode(Node):
                 await self.pc.close()
 
     async def start_webrtc_server(self):
-        server = await websockets.serve(self.handle_offer, "0.0.0.0", 8766)
-        self.get_logger().info("USB WebRTC signaling server started on port 8766")
+        server = await websockets.serve(self.handle_offer, "0.0.0.0", self.webrtc_port)
+        self.get_logger().info(f"USB WebRTC signaling server started on port {self.webrtc_port}")
         await asyncio.Future()
 
 

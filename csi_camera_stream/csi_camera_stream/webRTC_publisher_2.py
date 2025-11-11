@@ -17,13 +17,13 @@ import time
 sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
 import cv2
 
-class WebRTCPublisherNode(Node):
+class WebRTCPublisher2Node(Node):
     def __init__(self):
-        super().__init__("webrtc_publisher")
+        super().__init__("webrtc_publisher_2")
         
         # Parameters
-        self.declare_parameter("video_topic", "csi_video_stream/compressed")  # Compressed video stream topic
-        self.declare_parameter("webrtc_port", 8765)  # WebRTC signaling server port
+        self.declare_parameter("video_topic", "csi_video_stream_2/compressed")  # Compressed video stream topic
+        self.declare_parameter("webrtc_port", 8767)  # WebRTC signaling server port
 
         self.bridge = CvBridge()
         self.webrtc_port = self.get_parameter("webrtc_port").value
@@ -33,7 +33,7 @@ class WebRTCPublisherNode(Node):
         self.connection_id = 0  # Counter for unique connection IDs
 
         video_topic = self.get_parameter("video_topic").value
-        self.get_logger().info(f"WebRTC publisher started, subscribing to: {video_topic}")
+        self.get_logger().info(f"WebRTC publisher 2 started, subscribing to: {video_topic}")
         self.get_logger().info(f"WebRTC signaling server will start on port: {self.webrtc_port}")
         
         # Subscribe to compressed image topic
@@ -148,7 +148,7 @@ class WebRTCPublisherNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = WebRTCPublisherNode()
+    node = WebRTCPublisher2Node()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
