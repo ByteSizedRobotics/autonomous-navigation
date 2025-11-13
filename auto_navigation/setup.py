@@ -10,12 +10,17 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/nav2_outdoor.launch.py']),
+        ('share/' + package_name + '/launch', [
+            'launch/nav2_outdoor.launch.py',
+            'launch/wave_rider_tf.launch.py'
+        ]),
         ('share/' + package_name + '/config', [
             'config/ekf.yaml',
-            'config/nav2_params.yaml'
+            'config/nav2_params.yaml',
+            'config/wave_rider_tf.yaml'
         ]),
     ],
+
 
     install_requires=['setuptools'],
     zip_safe=True,
