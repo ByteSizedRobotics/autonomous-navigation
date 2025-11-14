@@ -16,6 +16,7 @@ def generate_launch_description():
     nav2_params_yaml = os.path.join(config_dir, 'nav2_params.yaml')
 
     # --- LIDAR Driver TODO: NATHAN
+    # TODO: wave_rider_tf NEEDS TO BE LAUNCHED FIRST
 
     # --- GPS Serial Driver --- TODO: should be NMEA GPS one?
     # gps_serial = Node(

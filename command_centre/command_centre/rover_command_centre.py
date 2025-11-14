@@ -630,7 +630,7 @@ class RoverCommandCentre(Node):
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
         
         # Ensure manual control and motor control are running , 'usb_camera'
-        manual_control_nodes = ['manual_control', 'gps', 'rover', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
+        manual_control_nodes = ['manual_control', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:

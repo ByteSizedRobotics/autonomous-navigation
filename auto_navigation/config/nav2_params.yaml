@@ -47,6 +47,7 @@ bt_navigator:
 
 # -------------------------------
 # Controller Server (Jazzy — explicit goal & progress checker blocks required)
+# TODO: NATHAN make sure this server launches properly
 # -------------------------------
 controller_server:
   ros__parameters:
@@ -55,7 +56,7 @@ controller_server:
     min_theta_velocity_threshold: 0.001
 
     # Jazzy requires explicit names for these plugins (exactly as used below)
-    progress_checker_plugin: "progress_checker"
+    progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["goal_checker"]
 
     progress_checker:
