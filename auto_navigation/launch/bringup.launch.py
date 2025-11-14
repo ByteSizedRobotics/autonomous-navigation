@@ -50,12 +50,13 @@ def generate_launch_description():
             }.items(),
         ),
 
-        # JSON motor bridge (cmd_vel → rover serial)
-        Node(
-            package='auto_nav',
-            executable='cmdvel_to_json',
-            name='cmdvel_to_json',
-            output='screen'
-        )
+        # TODO: NATHAN shouldnt need this launch? => merged into rover_serial_bridge?
+        # JSON motor bridge (cmd_vel → rover serial) 
+        # Node(
+        #     package='auto_nav',
+        #     executable='cmdvel_to_json',
+        #     name='cmdvel_to_json',
+        #     output='screen'
+        # )
     ])
 

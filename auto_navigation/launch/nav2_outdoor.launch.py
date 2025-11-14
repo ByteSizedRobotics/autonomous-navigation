@@ -15,15 +15,15 @@ def generate_launch_description():
     navsat_yaml = os.path.join(config_dir, 'navsat.yaml')
     nav2_params_yaml = os.path.join(config_dir, 'nav2_params.yaml')
 
-    # --- LIDAR Driver TO DO
+    # --- LIDAR Driver TODO: NATHAN
 
-    # --- GPS Serial Driver ---
-    gps_serial = Node(
-        package='auto_nav',
-        executable='gps_serial_driver',
-        name='gps_serial_driver',
-        output='screen'
-    )
+    # --- GPS Serial Driver --- TODO: should be NMEA GPS one?
+    # gps_serial = Node(
+    #     package='auto_nav',
+    #     executable='gps_serial_driver',
+    #     name='gps_serial_driver',
+    #     output='screen'
+    # )
 
     # --- IMU / Rover Serial Driver ---
     rover_serial = Node(
