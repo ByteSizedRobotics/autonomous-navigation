@@ -1,0 +1,17 @@
+navsat_transform_node:
+  ros__parameters:
+    frequency: 10.0
+
+    world_frame: map
+    base_link_frame: base_link
+    odom_frame: odom
+
+    imu_topic: /imu/data
+    gps_topic: /fix
+    odometry_topic: /odometry/filtered
+    gps_odom_topic: /gps/odom
+
+    broadcast_utm_transform: true
+    broadcast_utm_transform_as_parent_frame: true
+    publish_filtered_gps: true
+

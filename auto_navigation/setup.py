@@ -17,6 +17,7 @@ setup(
         ('share/' + package_name + '/config', [
             'config/ekf.yaml',
             'config/nav2_params.yaml',
+            'config/navsat.yaml',
             'config/wave_rider_tf.yaml'
         ]),
     ],

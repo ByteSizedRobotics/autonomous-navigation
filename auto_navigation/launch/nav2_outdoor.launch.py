@@ -5,9 +5,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 import os
 
-//TO DO:
-    - Add Lidar driver node to launch file
-    
 def generate_launch_description():
     ld = LaunchDescription()
 
@@ -17,6 +14,8 @@ def generate_launch_description():
     ekf_yaml = os.path.join(config_dir, 'ekf.yaml')
     navsat_yaml = os.path.join(config_dir, 'navsat.yaml')
     nav2_params_yaml = os.path.join(config_dir, 'nav2_params.yaml')
+
+    # --- LIDAR Driver TO DO
 
     # --- GPS Serial Driver ---
     gps_serial = Node(
@@ -34,40 +33,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --- GPS + IMU to Odometry Fusion ---
-    gps_imu_fusion = Node(
-        package='auto_nav',
-        executable='gps_imu_to_odom',
-        name='gps_imu_to_odometry',
-        output='screen'
-    )
-    
-    Node(
-        package='robot_localization',
-        executable='navsat_transform_node',
-        name='navsat_transform_node',
-        output='screen',
-        parameters=[
-            os.path.join(pkg_share, 'config', 'navsat_transform.yaml'),
-        ],
-        remappings=[
-            ('/imu/data', '/imu/data'),
-            ('/fix', '/fix'),
-            ('/odometry/filtered', '/odometry/filtered'),
-            ('/odometry/gps', '/odometry/gps'),
-        ]
-    )
-
-    # --- EKF Localization Node ---
-    ekf = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[ekf_yaml]
-    )
-
-    # --- NavSat Transform Node ---
+    # --- NavSat Transform ---
     navsat_transform = Node(
         package='robot_localization',
         executable='navsat_transform_node',
@@ -75,13 +41,32 @@ def generate_launch_description():
         output='screen',
         parameters=[navsat_yaml],
         remappings=[
-            ('/imu/data', '/imu/data'),
-            ('/gps/fix', '/fix'),
-            ('/odometry/filtered', '/odometry/filtered')
+            ('imu/data', '/imu/data'),
+            ('fix', '/fix'),
+            ('odometry/filtered', '/odometry/filtered'),
+            ('gps/odom', '/gps/odom')   # IMPORTANT: Correct GPS odom output
         ]
     )
 
-    # --- Nav2 Bringup ---
+    # --- EKF Localization (fuses IMU + GPS Odom) ---
+    ekf = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[ekf_yaml],
+        remappings=[
+            ('/gps/odom', '/gps/odom'),
+            ('/imu/data', '/imu/data')
+        ]
+    )
+
+    # --- Nav2 Bringup (no static map, GPS navigation only) ---
+    # Disable map_server + amcl before launching nav2
+    os.environ["MAP"] = "__NO_MAP__"
+    os.environ["AMCL"] = "0"
+    os.environ["MAP_SERVER"] = "0"
+
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -92,8 +77,10 @@ def generate_launch_description():
         ),
         launch_arguments={
             'use_sim_time': 'false',
-            'params_file': nav2_params_yaml
-        }.items()
+            'params_file': nav2_params_yaml,
+            'map': '__NO_MAP__',
+            'map_subscribe_transient_local': 'false'
+        }
     )
 
     # --- GPS Waypoint Client ---
@@ -112,15 +99,19 @@ def generate_launch_description():
         output='screen'
     )
 
-    # --- Add all nodes ---
+    # --- Add all nodes to launch description (correct order) ---
     ld.add_action(gps_serial)
     ld.add_action(rover_serial)
-    ld.add_action(gps_imu_fusion)
-    ld.add_action(ekf)
+
+    # NavSat first → EKF second (correct!)
     ld.add_action(navsat_transform)
+    ld.add_action(ekf)
+
+    # Then Nav2
     ld.add_action(nav2_launch)
+
+    # Finally supporting nodes
     ld.add_action(gps_waypoint_client)
     ld.add_action(cmdvel_to_json)
 
     return ld
-

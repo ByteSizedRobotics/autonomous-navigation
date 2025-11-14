@@ -1,7 +1,38 @@
+# nav2_params.yaml — GPS-only / dynamic localization (no static map)
+
+# -------------------------------
+# Map server (explicitly disabled)
+# -------------------------------
+map_server:
+  ros__parameters:
+    enabled: false
+    yaml_filename: ""        
+    frame_id: "map"
+    topic_name: "map"
+    use_sim_time: false
+
 amcl:
   ros__parameters:
-    use_map_topic: false
+    enabled: false
 
+# -------------------------------
+# Lifecycle managers
+# -------------------------------
+lifecycle_manager_localization:
+  ros__parameters:
+    use_sim_time: false
+    autostart: false         # DO NOT autostart localization manager (avoids configuring map_server)
+    #node_names: []         # leave empty / default
+
+lifecycle_manager_navigation:
+  ros__parameters:
+    use_sim_time: false
+    autostart: true         # start navigation-related lifecycle nodes
+    # Use default node_names; navigation manager will bring up controller/planner/costmaps/etc.
+
+# -------------------------------
+# Behaviour Tree / BT Navigator
+# -------------------------------
 bt_navigator:
   ros__parameters:
     use_sim_time: false
@@ -14,16 +45,27 @@ bt_navigator:
       - nav2_behavior_tree::FollowPathAction
       - nav2_behavior_tree::BackUpAction
 
-# ===============================
-# Controller Server
-# ===============================
+# -------------------------------
+# Controller Server (Jazzy — explicit goal & progress checker blocks required)
+# -------------------------------
 controller_server:
   ros__parameters:
     use_sim_time: false
     controller_frequency: 10.0
     min_theta_velocity_threshold: 0.001
+
+    # Jazzy requires explicit names for these plugins (exactly as used below)
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugins: ["simple_goal_checker"]
+    goal_checker_plugins: ["goal_checker"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.5
+      yaw_goal_tolerance: 0.25
+
     controller_plugins: ["FollowPath"]
 
     FollowPath:
@@ -43,9 +85,9 @@ controller_server:
       goal_dist_tol: 0.5
       goal_yaw_tol: 0.25
 
-# ===============================
+# -------------------------------
 # Planner Server
-# ===============================
+# -------------------------------
 planner_server:
   ros__parameters:
     use_sim_time: false
@@ -59,9 +101,9 @@ planner_server:
       use_astar: false
       allow_unknown: true
 
-# ===============================
+# -------------------------------
 # Recovery Behaviors
-# ===============================
+# -------------------------------
 recoveries_server:
   ros__parameters:
     costmap_clear_frequency: 1.0
@@ -74,9 +116,9 @@ recoveries_server:
     wait:
       plugin: "nav2_recoveries/Wait"
 
-# ===============================
+# -------------------------------
 # Waypoint Follower
-# ===============================
+# -------------------------------
 waypoint_follower:
   ros__parameters:
     use_sim_time: false
@@ -84,9 +126,9 @@ waypoint_follower:
     stop_on_failure: true
     interpolation_method: "linear"
 
-# ===============================
-# Global Costmap
-# ===============================
+# -------------------------------
+# Global Costmap (no static map dependency)
+# -------------------------------
 global_costmap:
   ros__parameters:
     use_sim_time: false
@@ -100,18 +142,12 @@ global_costmap:
     rolling_window: true
     always_send_full_costmap: true
 
-    plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
-
-    static_layer:
-      plugin: "nav2_costmap_2d::StaticLayer"
-      map_topic: map
-      subscribe_to_updates: false
-      enabled: false  # disable map dependency (GPS-based)
+    plugins: ["obstacle_layer", "inflation_layer"]
 
     obstacle_layer:
       plugin: "nav2_costmap_2d::ObstacleLayer"
       observation_sources: scan
-      scan: 
+      scan:
         topic: /scan
         sensor_frame: laser_frame
         data_type: LaserScan
@@ -127,9 +163,9 @@ global_costmap:
       cost_scaling_factor: 10.0
       inflation_radius: 0.6
 
-# ===============================
+# -------------------------------
 # Local Costmap
-# ===============================
+# -------------------------------
 local_costmap:
   ros__parameters:
     use_sim_time: false
@@ -148,7 +184,7 @@ local_costmap:
     obstacle_layer:
       plugin: "nav2_costmap_2d::ObstacleLayer"
       observation_sources: scan
-      scan: 
+      scan:
         topic: /scan
         sensor_frame: laser_frame
         data_type: LaserScan
