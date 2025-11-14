@@ -21,12 +21,14 @@ class CSIVideoNode(Node):
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
         self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
+        self.declare_parameter('camera_id', 0)  # Camera index for libcamera
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
         self.fps = self.get_parameter('fps').value
         self.camera_frame_id = self.get_parameter('camera_frame_id').value
         self.jpeg_quality = self.get_parameter('jpeg_quality').value
+        self.camera_id = self.get_parameter('camera_id').value
         
         # Create publishers
         self.image_pub = self.create_publisher(Image, 'csi_video_stream', 1)
@@ -58,30 +60,30 @@ class CSIVideoNode(Node):
         self.run()
     
     def run(self):
-        # Define the FIFO (named pipe)
-        fifo_path = "/tmp/camera_pipe"
+        # Define the FIFO (named pipe) with unique name
+        fifo_path = f"/tmp/camera_pipe_{self.camera_id}"
 
         # Ensure the FIFO does not exist before creating
         if os.path.exists(fifo_path):
             os.remove(fifo_path)
         os.mkfifo(fifo_path)
 
-        # Start libcamera-vid process with optimized settings
+        # Start libcamera-vid process with optimized settings and camera selection
         # Using MJPEG codec with quality control for better performance
-        cmd = f"libcamera-vid -t 0 --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --quality {self.jpeg_quality} --inline -o {fifo_path} --nopreview"
+        cmd = f"libcamera-vid -t 0 --camera {self.camera_id} --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --quality {self.jpeg_quality} --inline -o {fifo_path} --nopreview"
         process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe
         cap = cv2.VideoCapture(fifo_path)
         
         if not cap.isOpened():
-            self.get_logger().error("Failed to open camera pipe")
+            self.get_logger().error(f"Failed to open camera {self.camera_id} pipe")
             process.terminate()
             process.wait()
             os.remove(fifo_path)
             return
         
-        self.get_logger().info(f"CSI Camera opened successfully using libcamera")
+        self.get_logger().info(f"CSI Camera {self.camera_id} opened successfully using libcamera")
         self.get_logger().info(f"Resolution: {self.width}x{self.height} @ {self.fps} FPS")
         self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
         
@@ -178,7 +180,7 @@ class CSIVideoNode(Node):
                 os.remove(fifo_path)
             cv2.destroyAllWindows()
             self.get_logger().info(f"Captured {frame_count} frames")
-            self.get_logger().info("CSI Camera node stopped")
+            self.get_logger().info(f"CSI Camera {self.camera_id} node stopped")
 
 def main(args=None):
     rclpy.init(args=args)

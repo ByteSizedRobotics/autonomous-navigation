@@ -27,7 +27,8 @@ def generate_launch_description():
             'height': 720,
             'fps': 30,
             'jpeg_quality': 70,
-            'camera_frame_id': 'csi_camera'
+            'camera_frame_id': 'csi_camera',
+            'camera_id': 0  # First CSI camera
         }]
     )
 
