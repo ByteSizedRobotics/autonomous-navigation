@@ -29,7 +29,8 @@ def generate_launch_description():
         executable='usb_webRTC_publisher',
         name='usb_webRTC_publisher',
         parameters=[{
-            'video_topic': 'usb_video_stream/compressed'
+            'video_topic': 'usb_video_stream/compressed',
+            'webrtc_port': 8766  # Port for USB camera
         }]
     )
 

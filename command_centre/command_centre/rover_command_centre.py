@@ -54,6 +54,7 @@ class RoverCommandCentre(Node):
             'gps': NodeStatus.OFFLINE,
             'rover': NodeStatus.OFFLINE,
             'csi_camera_1': NodeStatus.OFFLINE,
+            'csi_camera_2': NodeStatus.OFFLINE,
             'obstacle_detection': NodeStatus.OFFLINE,
             'manual_control': NodeStatus.OFFLINE,
             'usb_camera': NodeStatus.OFFLINE
@@ -163,9 +164,10 @@ class RoverCommandCentre(Node):
             
             # Define launch commands for each node
             launch_commands = {
-                'gps': 'ros2 run auto_nav gps_serial_driver',
+                'gps': 'ros2 run nmea_navsat_driver nmea_serial_driver',
 		        'rover': 'ros2 run auto_nav rover_serial_bridge',
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
+                'csi_camera_2': 'ros2 launch csi_camera_stream csi_camera_stream_2.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
                 'manual_control': 'ros2 run potrider wasd_control',
                 'usb_camera': 'ros2 launch csi_camera_stream usb_camera_stream.launch.py'
@@ -278,7 +280,8 @@ class RoverCommandCentre(Node):
             # This helps ensure we catch all related processes
             node_kill_targets = {
                 'obstacle_detection': ['rplidar_node', 'obstacle_detector', 'rplidar_composition'],
-                'csi_camera_1': ['csi_camera_inference', 'csi_camera_video', 'csi_camera_snapshot'],
+                'csi_camera_1': ['csi_camera_video'],
+                'csi_camera_2': ['csi_camera_video_2'],
                 'usb_camera': ['usb_camera_video', 'usb_webRTC_publisher'],
                 'gps': ['gps_serial_driver'],
                 'rover': ['rover_serial_bridge'],
@@ -406,6 +409,7 @@ class RoverCommandCentre(Node):
             'obstacle_detector',      # Obstacle detection
             'csi_camera_inference',   # Camera inference
             'csi_camera_video',       # Camera video
+            'csi_camera_video_2',     # Second CSI Camera video
             'usb_camera_video',      # USB Camera video
             'gps_serial_driver',      # GPS driver
             'rover_serial_bridge',      # IMU driver
@@ -567,8 +571,8 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation'usb_camera',
-        #autonomous_nodes = [ 'csi_camera_1', 'rover', 'usb_camera', 'gps', 'obstacle_detection']
-        autonomous_nodes = ['csi_camera_1', 'usb_camera']
+        autonomous_nodes = ['gps', 'rover', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
+        # autonomous_nodes = ['csi_camera_1', 'usb_camera']
 
         
         for node_name in autonomous_nodes:
@@ -626,7 +630,7 @@ class RoverCommandCentre(Node):
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
         
         # Ensure manual control and motor control are running , 'usb_camera'
-        manual_control_nodes = ['manual_control', 'gps', 'obstacle_detection', 'csi_camera_1', 'usb_camera', 'rover']
+        manual_control_nodes = ['manual_control', 'gps', 'rover', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:

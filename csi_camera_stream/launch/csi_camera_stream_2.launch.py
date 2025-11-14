@@ -8,38 +8,29 @@ from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
-    # Create an argument for stream type
-
-    # CAN CHOOSE BETWEEN THESE OPTIONS
-    # 'video': 'csi_camera_video',
-    # 'inference': 'csi_camera_inference',
-    # 'snapshot': 'csi_camera_snapshot'
-
-    camera_node_name = 'csi_camera_video'
-
-    # Camera node launch action with optimized parameters
+    # CSI Camera 2 node launch action
     camera_node = launch_ros.actions.Node(
         package='csi_camera_stream',
-        executable=camera_node_name,
-        name=camera_node_name,
+        executable='csi_camera_video_2',
+        name='csi_camera_video_2',
         parameters=[{
             'width': 1280,
             'height': 720,
             'fps': 30,
             'jpeg_quality': 70,
-            'camera_frame_id': 'csi_camera',
-            'camera_id': 0  # First CSI camera
+            'camera_frame_id': 'csi_camera_2',
+            'camera_id': 1  # Second CSI camera (camera 0 is the first)
         }]
     )
 
-    # WebRTC publisher node launch action with compressed stream
+    # WebRTC publisher 2 node launch action
     webrtc_node = launch_ros.actions.Node(
         package='csi_camera_stream',
-        executable='webRTC_publisher',
-        name='webRTC_publisher',
+        executable='webRTC_publisher_2',
+        name='webRTC_publisher_2',
         parameters=[{
-            'video_topic': 'csi_video_stream/compressed',
-            'webrtc_port': 8765  # Port for first CSI camera
+            'video_topic': 'csi_video_stream_2/compressed',
+            'webrtc_port': 8767  # Port for second CSI camera
         }]
     )
 

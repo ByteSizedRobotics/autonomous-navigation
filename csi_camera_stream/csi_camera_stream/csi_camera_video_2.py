@@ -11,17 +11,17 @@ sys.path.insert(0, '/home/adminbyte/opencv/build/lib/python3')
 import cv2
 import time
 
-class CSIVideoNode(Node):
+class CSIVideo2Node(Node):
     def __init__(self):
-        super().__init__('csi_video_node')
+        super().__init__('csi_video_node_2')
         
         # Get parameters
         self.declare_parameter('width', 1280)
         self.declare_parameter('height', 720)
         self.declare_parameter('fps', 30)
-        self.declare_parameter('camera_frame_id', 'camera')
+        self.declare_parameter('camera_frame_id', 'camera_2')
         self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
-        self.declare_parameter('camera_id', 0)  # Camera index for libcamera
+        self.declare_parameter('camera_id', 1)  # Camera index for libcamera
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -30,10 +30,10 @@ class CSIVideoNode(Node):
         self.jpeg_quality = self.get_parameter('jpeg_quality').value
         self.camera_id = self.get_parameter('camera_id').value
         
-        # Create publishers
-        self.image_pub = self.create_publisher(Image, 'csi_video_stream', 1)
-        self.compressed_pub = self.create_publisher(CompressedImage, 'csi_video_stream/compressed', 1)
-        self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 1)
+        # Create publishers with unique topic names
+        self.image_pub = self.create_publisher(Image, 'csi_video_stream_2', 1)
+        self.compressed_pub = self.create_publisher(CompressedImage, 'csi_video_stream_2/compressed', 1)
+        self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info_2', 1)
         
         # Create bridge for OpenCV to ROS conversion
         self.bridge = CvBridge()
@@ -87,11 +87,6 @@ class CSIVideoNode(Node):
         self.get_logger().info(f"Resolution: {self.width}x{self.height} @ {self.fps} FPS")
         self.get_logger().info(f"JPEG Quality: {self.jpeg_quality}")
         
-        # Debugging: Check video capture properties
-        # self.get_logger().info(f"Capture FPS: {cap.get(cv2.CAP_PROP_FPS)}")
-        # self.get_logger().info(f"Frame Width: {cap.get(cv2.CAP_PROP_FRAME_WIDTH)}")
-        # self.get_logger().info(f"Frame Height: {cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-        
         frame_count = 0
         consecutive_failures = 0
         max_consecutive_failures = 10
@@ -131,19 +126,6 @@ class CSIVideoNode(Node):
                 # Reset failure counter on successful frame
                 consecutive_failures = 0
                 
-                # Debugging: Add frame count and timestamp to image
-                # cv2.putText(frame, 
-                #            f"Frame: {frame_count} Time: {time.time() - start_time:.2f}s", 
-                #            (10, 30), 
-                #            cv2.FONT_HERSHEY_SIMPLEX, 
-                #            1, 
-                #            (0, 255, 0), 
-                #            2)
-                
-                # Show frame with debugging info
-                # cv2.imshow("Video Stream", frame)
-                # cv2.waitKey(1)  # Small delay to update window
-                
                 now = self.get_clock().now().to_msg()
                 
                 # Publish raw image
@@ -165,10 +147,6 @@ class CSIVideoNode(Node):
                 self.camera_info_pub.publish(self.camera_info_msg)
                 
                 frame_count += 1
-                
-                # Optional: Break after certain number of frames for testing
-                # if frame_count > 300:
-                #     break
         
         except Exception as e:
             self.get_logger().error(f"Error: {e}")
@@ -184,7 +162,7 @@ class CSIVideoNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = CSIVideoNode()
+    node = CSIVideo2Node()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
