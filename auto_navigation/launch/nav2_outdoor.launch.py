@@ -68,25 +68,20 @@ def generate_launch_description():
         ]
     )
 
-    # --- Nav2 Bringup (no static map, GPS navigation only) ---
-    # Disable map_server + amcl before launching nav2
-    os.environ["MAP"] = "__NO_MAP__"
-    os.environ["AMCL"] = "0"
-    os.environ["MAP_SERVER"] = "0"
-
+    # --- Nav2 Navigation Stack (no map_server or amcl) ---
+    # Use navigation_launch.py instead of bringup_launch.py to avoid map_server/amcl
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
                 get_package_share_directory('nav2_bringup'),
                 'launch',
-                'bringup_launch.py'
+                'navigation_launch.py'
             )
         ),
         launch_arguments={
             'use_sim_time': 'false',
             'params_file': nav2_params_yaml,
-            'map': '__NO_MAP__',
-            'map_subscribe_transient_local': 'false'
+            'autostart': 'true'
         }.items()
     )
 
