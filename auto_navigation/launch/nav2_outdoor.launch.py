@@ -68,21 +68,83 @@ def generate_launch_description():
         ]
     )
 
-    # --- Nav2 Navigation Stack (no map_server or amcl) ---
-    # Use navigation_launch.py instead of bringup_launch.py to avoid map_server/amcl
-    nav2_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory('nav2_bringup'),
-                'launch',
-                'navigation_launch.py'
-            )
-        ),
-        launch_arguments={
-            'use_sim_time': 'false',
-            'params_file': nav2_params_yaml,
-            'autostart': 'true'
-        }.items()
+    # --- Nav2 Navigation Stack (manually launched to exclude docking_server) ---
+    # Launch individual Nav2 components instead of navigation_launch.py to avoid docking_server
+    
+    # Controller Server
+    controller_server = Node(
+        package='nav2_controller',
+        executable='controller_server',
+        name='controller_server',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # Planner Server
+    planner_server = Node(
+        package='nav2_planner',
+        executable='planner_server',
+        name='planner_server',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # Behavior Server
+    behavior_server = Node(
+        package='nav2_behaviors',
+        executable='behavior_server',
+        name='behavior_server',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # BT Navigator
+    bt_navigator = Node(
+        package='nav2_bt_navigator',
+        executable='bt_navigator',
+        name='bt_navigator',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # Waypoint Follower
+    waypoint_follower = Node(
+        package='nav2_waypoint_follower',
+        executable='waypoint_follower',
+        name='waypoint_follower',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # Velocity Smoother
+    velocity_smoother = Node(
+        package='nav2_velocity_smoother',
+        executable='velocity_smoother',
+        name='velocity_smoother',
+        output='screen',
+        parameters=[nav2_params_yaml],
+        remappings=[
+            ('cmd_vel', 'cmd_vel_nav'),
+            ('cmd_vel_smoothed', 'cmd_vel')
+        ]
+    )
+    
+    # Collision Monitor
+    collision_monitor = Node(
+        package='nav2_collision_monitor',
+        executable='collision_monitor',
+        name='collision_monitor',
+        output='screen',
+        parameters=[nav2_params_yaml]
+    )
+    
+    # Lifecycle Manager for Navigation
+    lifecycle_manager_navigation = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_navigation',
+        output='screen',
+        parameters=[nav2_params_yaml]
     )
 
     # --- GPS Waypoint Client ---
@@ -112,8 +174,15 @@ def generate_launch_description():
     ld.add_action(navsat_transform)
     ld.add_action(ekf)
 
-    # Then Nav2
-    ld.add_action(nav2_launch)
+    # Then Nav2 components (without docking_server)
+    ld.add_action(controller_server)
+    ld.add_action(planner_server)
+    ld.add_action(behavior_server)
+    ld.add_action(bt_navigator)
+    ld.add_action(waypoint_follower)
+    ld.add_action(velocity_smoother)
+    ld.add_action(collision_monitor)
+    ld.add_action(lifecycle_manager_navigation)
 
     # Finally supporting nodes
     ld.add_action(gps_waypoint_client)

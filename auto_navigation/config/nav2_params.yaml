@@ -28,7 +28,15 @@ lifecycle_manager_navigation:
   ros__parameters:
     use_sim_time: false
     autostart: true         # start navigation-related lifecycle nodes
-    # Use default node_names; navigation manager will bring up controller/planner/costmaps/etc.
+    node_names: 
+      - 'controller_server'
+      - 'planner_server'
+      - 'behavior_server'
+      - 'bt_navigator'
+      - 'waypoint_follower'
+      - 'velocity_smoother'
+      - 'collision_monitor'
+    # Explicitly exclude docking_server to prevent charging dock plugin errors
 
 # -------------------------------
 # Behaviour Tree / BT Navigator
