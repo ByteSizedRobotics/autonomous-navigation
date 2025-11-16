@@ -33,17 +33,22 @@ lifecycle_manager_navigation:
 # -------------------------------
 # Behaviour Tree / BT Navigator
 # -------------------------------
+# bt_navigator:
+#   ros__parameters:
+#     use_sim_time: false
+#     default_bt_xml_filename: "navigate_to_pose_w_replanning_and_recovery.xml"
+#     enable_groot_monitoring: false
+#     plugin_lib_names:
+#       - nav2_behavior_tree::NavigateToPoseAction
+#       - nav2_behavior_tree::WaitAction
+#       - nav2_behavior_tree::ClearEntireCostmapService
+#       - nav2_behavior_tree::FollowPathAction
+#       - nav2_behavior_tree::BackUpAction
 bt_navigator:
   ros__parameters:
     use_sim_time: false
     default_bt_xml_filename: "navigate_to_pose_w_replanning_and_recovery.xml"
     enable_groot_monitoring: false
-    plugin_lib_names:
-      - nav2_behavior_tree::NavigateToPoseAction
-      - nav2_behavior_tree::WaitAction
-      - nav2_behavior_tree::ClearEntireCostmapService
-      - nav2_behavior_tree::FollowPathAction
-      - nav2_behavior_tree::BackUpAction
 
 # -------------------------------
 # Controller Server (Jazzy — explicit goal & progress checker blocks required)
