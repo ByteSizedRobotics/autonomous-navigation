@@ -572,7 +572,7 @@ class RoverCommandCentre(Node):
         
         # Start required nodes for autonomous navigation'usb_camera',
         autonomous_nodes = ['gps', 'rover', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
-        # autonomous_nodes = ['csi_camera_1', 'usb_camera']
+        # autonomous_nodes = ['usb_camera', 'csi_camera_1', 'csi_camera_2']
 
         
         for node_name in autonomous_nodes:
@@ -631,6 +631,8 @@ class RoverCommandCentre(Node):
         
         # Ensure manual control and motor control are running , 'usb_camera'
         manual_control_nodes = ['manual_control', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
+        #manual_control_nodes = ['manual_control', 'gps', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
+
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -658,7 +660,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.IDLE
         
         # List of all nodes to stop (excludes the communication node itself) , 'usb_camera'
-        nodes_to_stop = ['gps', 'rover', 'csi_camera_1', 'obstacle_detection', 'manual_control']
+        nodes_to_stop = ['gps', 'rover', 'csi_camera_1', 'csi_camera_2', 'usb_camera', 'obstacle_detection', 'manual_control']
         
         # Stop all nodes regardless of their current status
         # (they might be in ERROR or STARTING state but still have processes running)

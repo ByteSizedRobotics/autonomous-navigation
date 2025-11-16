@@ -15,8 +15,14 @@ def generate_launch_description():
     navsat_yaml = os.path.join(config_dir, 'navsat.yaml')
     nav2_params_yaml = os.path.join(config_dir, 'nav2_params.yaml')
 
+    # --- TF Transforms (must launch first) ---
+    wave_rider_tf_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_dir, 'launch', 'wave_rider_tf.launch.py')
+        )
+    )
+
     # --- LIDAR Driver TODO: NATHAN
-    # TODO: wave_rider_tf NEEDS TO BE LAUNCHED FIRST
 
     # --- GPS Serial Driver --- TODO: should be NMEA GPS one?
     # gps_serial = Node(
@@ -81,7 +87,7 @@ def generate_launch_description():
             'params_file': nav2_params_yaml,
             'map': '__NO_MAP__',
             'map_subscribe_transient_local': 'false'
-        }
+        }.items()
     )
 
     # --- GPS Waypoint Client ---
@@ -93,15 +99,18 @@ def generate_launch_description():
     )
 
     # --- CmdVel → JSON Bridge ---
-    cmdvel_to_json = Node(
-        package='auto_nav',
-        executable='cmdvel_to_json',
-        name='cmdvel_to_json',
-        output='screen'
-    )
+    # cmdvel_to_json = Node(
+    #     package='auto_nav',
+    #     executable='cmdvel_to_json',
+    #     name='cmdvel_to_json',
+    #     output='screen'
+    # )
 
     # --- Add all nodes to launch description (correct order) ---
-    ld.add_action(gps_serial)
+    # TF transforms FIRST
+    ld.add_action(wave_rider_tf_launch)
+    
+    # ld.add_action(gps_serial)  # TODO: Uncomment when GPS driver is implemented
     ld.add_action(rover_serial)
 
     # NavSat first → EKF second (correct!)
@@ -113,6 +122,6 @@ def generate_launch_description():
 
     # Finally supporting nodes
     ld.add_action(gps_waypoint_client)
-    ld.add_action(cmdvel_to_json)
+    # ld.add_action(cmdvel_to_json)
 
     return ld
