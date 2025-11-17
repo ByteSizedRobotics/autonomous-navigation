@@ -704,10 +704,12 @@ class RoverCommandCentre(Node):
     
     def publish_status(self):
         """Publish rover state timestamp"""
-        # Publish current timestamp
-        state_msg = String()
-        state_msg.data = str(time.time())
-        self.rover_timestamp.publish(state_msg)
+        # Only publish timestamp if rover is not in IDLE state (emergency stopped)
+        # This prevents UI from thinking rover is operational after emergency stop
+        if self.rover_state != RoverState.IDLE:
+            state_msg = String()
+            state_msg.data = str(time.time())
+            self.rover_timestamp.publish(state_msg)
     
     def publish_node_status(self):
         """Publish current status of all nodes"""
