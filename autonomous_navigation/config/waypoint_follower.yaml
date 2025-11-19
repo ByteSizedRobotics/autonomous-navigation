@@ -1,0 +1,19 @@
+# Simple Waypoint Follower Configuration
+
+simple_waypoint_follower:
+  ros__parameters:
+    # Distance threshold to consider waypoint reached (meters)
+    waypoint_threshold: 2.0
+    
+    # Maximum linear speed (m/s)
+    max_linear_speed: 0.5
+    
+    # Maximum angular speed (rad/s)
+    max_angular_speed: 0.8
+    
+    # Obstacle detection distance threshold (meters)
+    obstacle_distance: 1.0
+    
+    # Obstacle detection angle from center (degrees)
+    # This defines the front sector to check for obstacles
+    obstacle_angle: 60.0
