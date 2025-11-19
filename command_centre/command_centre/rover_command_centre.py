@@ -165,7 +165,7 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 run nmea_navsat_driver nmea_serial_driver',
-		        'rover': 'ros2 run auto_nav rover_serial_bridge', # TODO: NATHAN LAUNCH AUTONAV => its the nav2_outdoor_launch.py, should launch rover_serial_bridge automatically
+		        'rover': 'ros2 launch auto_nav nav2_outdoor.launch.py',  # Launch full Nav2 + localization stack
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'csi_camera_2': 'ros2 launch csi_camera_stream csi_camera_stream_2.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',

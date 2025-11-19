@@ -1,4 +1,4 @@
-ekf_node:
+ekf_filter_node:
   ros__parameters:
     frequency: 30
     two_d_mode: true
@@ -7,7 +7,7 @@ ekf_node:
     map_frame: map
     odom_frame: odom
     base_link_frame: base_link
-    world_frame: map
+    world_frame: odom  # EKF works in odom frame, NavSat creates map frame
 
     # GPS from NavSat transform
     odom0: /gps/odom

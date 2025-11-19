@@ -170,7 +170,9 @@ def generate_launch_description():
     # ld.add_action(gps_serial)  # TODO: Uncomment when GPS driver is implemented
     ld.add_action(rover_serial)
 
-    # NavSat first → EKF second (correct!)
+    # EKF first (it needs to start publishing /odometry/filtered)
+    # Then NavSat (it waits for /odometry/filtered to create map frame)
+    # ld.add_action(ekf)
     ld.add_action(navsat_transform)
     ld.add_action(ekf)
 

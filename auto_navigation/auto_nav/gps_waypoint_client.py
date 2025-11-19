@@ -3,7 +3,8 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from geometry_msgs.msg import PoseStamped, Point
 from nav2_msgs.action import NavigateToPose
-from std_msgs.msg import Float64MultiArray  # optional message type
+from std_msgs.msg import String
+import json
 
 
 class GPSWaypointNavClient(Node):
@@ -23,7 +24,7 @@ class GPSWaypointNavClient(Node):
 
         # Subscriber to continuous GPS waypoint stream
         self.subscription = self.create_subscription(
-            Float64MultiArray,           # or Point if you prefer
+            String,
             '/gps_waypoints',
             self.waypoint_callback,
             10
@@ -33,17 +34,40 @@ class GPSWaypointNavClient(Node):
 
     # --- Receive incoming GPS waypoint ---
     def waypoint_callback(self, msg):
-        if len(msg.data) < 2:
-            self.get_logger().warn("Received invalid GPS waypoint (need [lat, lon])")
-            return
+        # Parse JSON format from UI: {"rover_id": 1, "waypoints": [...], "timestamp": 123}
+        try:
+            data = json.loads(msg.data)
+            
+            # Validate message structure
+            if 'waypoints' not in data:
+                self.get_logger().warn(f"Invalid message format: missing 'waypoints' field")
+                return
+            
+            waypoints = data['waypoints']
+            if not isinstance(waypoints, list) or len(waypoints) == 0:
+                self.get_logger().warn(f"No waypoints in message")
+                return
+            
+            # Add all waypoints to queue
+            for wp in waypoints:
+                if 'latitude' in wp and 'longitude' in wp:
+                    lat = float(wp['latitude'])
+                    lon = float(wp['longitude'])
+                    self.gps_waypoints.append((lat, lon))
+                    self.get_logger().info(f"Queued GPS waypoint {wp.get('id', '?')}: ({lat:.6f}, {lon:.6f})")
+                else:
+                    self.get_logger().warn(f"Waypoint missing lat/lon: {wp}")
+            
+            self.get_logger().info(f"Total waypoints in queue: {len(self.gps_waypoints)}")
 
-        lat, lon = msg.data[0], msg.data[1]
-        self.gps_waypoints.append((lat, lon))
-        self.get_logger().info(f"Queued new GPS waypoint: ({lat:.6f}, {lon:.6f})")
-
-        # If Nav2 is idle, immediately send this as a goal
-        if not self.current_goal_active:
-            self.send_next_goal()
+            # If Nav2 is idle, immediately send first goal
+            if not self.current_goal_active and self.gps_waypoints:
+                self.send_next_goal()
+                
+        except json.JSONDecodeError as e:
+            self.get_logger().warn(f"Failed to parse JSON waypoint message: {e}")
+        except (ValueError, KeyError) as e:
+            self.get_logger().warn(f"Failed to process waypoint data: {e}")
 
     # --- Send next goal in queue ---
     def send_next_goal(self):
