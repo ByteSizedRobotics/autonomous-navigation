@@ -174,11 +174,13 @@ class RoverCommandCentre(Node):
             }
             
             if node_name in launch_commands:
-                # Start the node process
+                # Start the node process with output visible in terminal
+                # Set stdout/stderr to None to see output in real-time
+                self.get_logger().info(f"Launching: {launch_commands[node_name]}")
                 process = subprocess.Popen(
                     launch_commands[node_name].split(),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=None,  # Output goes to terminal
+                    stderr=None,  # Errors go to terminal
                     text=True
                 )
                 self.node_processes[node_name] = process
@@ -190,18 +192,9 @@ class RoverCommandCentre(Node):
                 # Check if process has already exited
                 exit_code = process.poll()
                 if exit_code is not None:
-                    # Process has terminated - get output for diagnostics
-                    try:
-                        stdout, stderr = process.communicate(timeout=1)
-                        self.node_status[node_name] = NodeStatus.ERROR
-                        self.get_logger().error(f"Node {node_name} failed to start - process exited with code {exit_code}")
-                        if stderr:
-                            self.get_logger().error(f"Error output: {stderr[:500]}")
-                        if stdout:
-                            self.get_logger().info(f"Standard output: {stdout[:500]}")
-                    except subprocess.TimeoutExpired:
-                        self.node_status[node_name] = NodeStatus.ERROR
-                        self.get_logger().error(f"Node {node_name} failed - could not read output")
+                    # Process has terminated
+                    self.node_status[node_name] = NodeStatus.ERROR
+                    self.get_logger().error(f"Node {node_name} failed to start - process exited with code {exit_code}")
                     return False
                 
                 # Process is still running - assume success
@@ -210,13 +203,8 @@ class RoverCommandCentre(Node):
                 self.node_status[node_name] = NodeStatus.RUNNING
                 self.get_logger().info(f"Started node: {node_name}")
                 
-                # Start a background thread to monitor the node's stderr for errors
-                monitor_thread = threading.Thread(
-                    target=self._monitor_node_errors,
-                    args=(node_name, process),
-                    daemon=True
-                )
-                monitor_thread.start()
+                # Note: Error monitoring thread removed since we're now showing output directly
+                # All stdout/stderr will appear in the terminal in real-time
                 
                 return True
             else:

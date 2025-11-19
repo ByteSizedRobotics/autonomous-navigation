@@ -34,16 +34,19 @@ class GPSWaypointNavClient(Node):
 
     # --- Receive incoming GPS waypoint ---
     def waypoint_callback(self, msg):
-        # Parse JSON format from UI: {"rover_id": 1, "waypoints": [...], "timestamp": 123}
+        # Parse JSON format from UI: {"type":"waypoints", "data": {"waypoints": [...]}}
         try:
             data = json.loads(msg.data)
             
-            # Validate message structure
-            if 'waypoints' not in data:
+            # Handle nested structure from UI
+            if 'data' in data and 'waypoints' in data['data']:
+                waypoints = data['data']['waypoints']
+            elif 'waypoints' in data:
+                waypoints = data['waypoints']
+            else:
                 self.get_logger().warn(f"Invalid message format: missing 'waypoints' field")
                 return
             
-            waypoints = data['waypoints']
             if not isinstance(waypoints, list) or len(waypoints) == 0:
                 self.get_logger().warn(f"No waypoints in message")
                 return
