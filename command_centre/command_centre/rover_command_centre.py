@@ -46,6 +46,9 @@ class RoverCommandCentre(Node):
     def __init__(self):
         super().__init__('rover_command_centre')
 
+        # Debug flag: Set to True to see all node output, False to only see command centre logs
+        self.debug_node_output = False
+        
         self.rover_id = 1 # TODO: NATHAN HARDCODED HERE, BUT NEED ENV VAR IN RASPI
         self.num_heartbeats_missed = 0
         
@@ -73,7 +76,7 @@ class RoverCommandCentre(Node):
 
         # Command subscribers for external control
         self.command_sub = self.create_subscription(String, '/command', self.command_callback, 10)
-        self.swdata_sub = self.create_subscription(String, '/gps_waypoints', self.swdata_callback, 10)
+        # self.swdata_sub = self.create_subscription(String, '/gps_waypoints', self.swdata_callback, 10)
         self.heartbeat_sub = self.create_subscription(String, '/heartbeat', self.heartbeat_callback, 10)
         
         # Timers
@@ -124,30 +127,30 @@ class RoverCommandCentre(Node):
         self.last_heartbeat = time.time()
         self.num_heartbeats_missed = 0  # Reset missed count on successful heartbeat
     
-    def swdata_callback(self, msg):
-        """Process software data and forward to appropriate rover nodes"""
-        try:
-            data = json.loads(msg.data)
-            data_type = data.get('type')
-            data_payload = data.get('data', {})
+    # def swdata_callback(self, msg):
+    #     """Process software data and forward to appropriate rover nodes"""
+    #     try:
+    #         data = json.loads(msg.data)
+    #         data_type = data.get('type')
+    #         data_payload = data.get('data', {})
             
-            self.get_logger().info(f"Received swdata: {data_type}")
+    #         self.get_logger().info(f"Received swdata: {data_type}")
             
-            if data_type == 'waypoints':
-                # Forward GPS waypoints to autonomous navigation system
-                waypoints_msg = String()
-                waypoints_msg.data = json.dumps(data_payload)
-                # TODO: need to pass waypoints to AUTONAV in format it expects
-                # self.waypoints_pub.publish(waypoints_msg)
-                # self.get_logger().info(f"Forwarded {len(data_payload.get('waypoints', []))} waypoints to navigation system")
+    #         if data_type == 'waypoints':
+    #             # Forward GPS waypoints to autonomous navigation system
+    #             waypoints_msg = String()
+    #             waypoints_msg.data = json.dumps(data_payload)
+    #             # TODO: need to pass waypoints to AUTONAV in format it expects
+    #             # self.waypoints_pub.publish(waypoints_msg)
+    #             # self.get_logger().info(f"Forwarded {len(data_payload.get('waypoints', []))} waypoints to navigation system")
                 
-            else:
-                self.get_logger().warn(f"Unknown data type: {data_type}")
+    #         else:
+    #             self.get_logger().warn(f"Unknown data type: {data_type}")
                 
-        except json.JSONDecodeError:
-            self.get_logger().error("Invalid JSON swdata received")
-        except Exception as e:
-            self.get_logger().error(f"Error processing swdata: {e}")
+    #     except json.JSONDecodeError:
+    #         self.get_logger().error("Invalid JSON swdata received")
+    #     except Exception as e:
+    #         self.get_logger().error(f"Error processing swdata: {e}")
     
     def start_node(self, node_name):
         """Start a specific rover node"""
@@ -165,7 +168,7 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 run nmea_navsat_driver nmea_serial_driver',
-		        'rover': 'ros2 launch auto_nav nav2_outdoor.launch.py',  # Launch full Nav2 + localization stack
+		        'rover': 'ros2 launch autonomous_navigation autonomous_navigation.launch.py',
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'csi_camera_2': 'ros2 launch csi_camera_stream csi_camera_stream_2.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
@@ -174,15 +177,27 @@ class RoverCommandCentre(Node):
             }
             
             if node_name in launch_commands:
-                # Start the node process with output visible in terminal
-                # Set stdout/stderr to None to see output in real-time
+                # Start the node process
+                # Output visibility controlled by debug_node_output flag
                 self.get_logger().info(f"Launching: {launch_commands[node_name]}")
-                process = subprocess.Popen(
-                    launch_commands[node_name].split(),
-                    stdout=None,  # Output goes to terminal
-                    stderr=None,  # Errors go to terminal
-                    text=True
-                )
+                
+                if self.debug_node_output:
+                    # Debug mode: Show all node output in terminal
+                    process = subprocess.Popen(
+                        launch_commands[node_name].split(),
+                        stdout=None,
+                        stderr=None,
+                        text=True
+                    )
+                else:
+                    # Normal mode: Suppress node output, only show command centre logs
+                    process = subprocess.Popen(
+                        launch_commands[node_name].split(),
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        text=True
+                    )
+                
                 self.node_processes[node_name] = process
                 
                 # Give the node more time to start up and potentially fail if hardware is missing
@@ -559,7 +574,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation'usb_camera',
-        autonomous_nodes = ['gps', 'rover', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
+        autonomous_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2'] # 'rover',
         # autonomous_nodes = ['usb_camera', 'csi_camera_1', 'csi_camera_2']
 
         
@@ -618,7 +633,7 @@ class RoverCommandCentre(Node):
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
         
         # Ensure manual control and motor control are running , 'usb_camera'
-        manual_control_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
+        manual_control_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2'] # , 'rover'
         #manual_control_nodes = ['manual_control', 'gps', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
 
         
