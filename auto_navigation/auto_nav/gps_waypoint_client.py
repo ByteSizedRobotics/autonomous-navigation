@@ -85,7 +85,7 @@ class GPSWaypointNavClient(Node):
 
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose = PoseStamped()
-        goal_msg.pose.header.frame_id = 'map'
+        goal_msg.pose.header.frame_id = 'odom'
         goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
         goal_msg.pose.pose.position.x = x
         goal_msg.pose.pose.position.y = y

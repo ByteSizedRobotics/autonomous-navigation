@@ -48,21 +48,35 @@ def generate_launch_description():
         output='screen',
         parameters=[navsat_yaml],
         remappings=[
-            ('imu/data', '/imu/data'),
-            ('fix', '/fix'),
-            ('odometry/filtered', '/odometry/filtered'),
-            ('gps/odom', '/gps/odom')   # IMPORTANT: Correct GPS odom output
+            ('imu', '/imu/data'),
+            ('gps/fix', '/fix'),
+            ('odometry/filtered', '/odometry/local'),  # Use local EKF output
+            ('odometry/gps', '/gps/odom')  # Output GPS as odometry
         ]
     )
 
-    # --- EKF Localization (fuses IMU + GPS Odom) ---
-    ekf = Node(
+    # --- EKF Local (odom frame) - Publishes odom->base_link using IMU only ---
+    ekf_odom = Node(
         package='robot_localization',
         executable='ekf_node',
-        name='ekf_filter_node',
+        name='ekf_filter_node_odom',
         output='screen',
         parameters=[ekf_yaml],
         remappings=[
+            ('odometry/filtered', '/odometry/local'),  # Local odometry output
+            ('/imu/data', '/imu/data')
+        ]
+    )
+
+    # --- EKF Global (map frame) - Publishes map->odom using GPS + IMU ---
+    ekf_map = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node_map',
+        output='screen',
+        parameters=[ekf_yaml],
+        remappings=[
+            ('odometry/filtered', '/odometry/filtered'),  # Global odometry for Nav2
             ('/gps/odom', '/gps/odom'),
             ('/imu/data', '/imu/data')
         ]
@@ -173,8 +187,9 @@ def generate_launch_description():
     # EKF first (it needs to start publishing /odometry/filtered)
     # Then NavSat (it waits for /odometry/filtered to create map frame)
     # ld.add_action(ekf)
+    ld.add_action(ekf_odom)
+    ld.add_action(ekf_map)
     ld.add_action(navsat_transform)
-    ld.add_action(ekf)
 
     # Then Nav2 components (without docking_server)
     ld.add_action(controller_server)
