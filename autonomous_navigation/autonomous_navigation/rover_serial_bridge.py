@@ -90,11 +90,23 @@ class RoverSerialBridge(Node):
         self.send_command({"T": 142, "cmd": 20})  # 20 ms interval (50 Hz)
     
     def cmdvel_callback(self, msg):
-        # Convert Twist to JSON
+        # Convert Twist (linear.x, angular.z) to differential drive (left, right)
+        # linear.x = forward speed, angular.z = rotation speed
+        linear = msg.linear.x
+        angular = msg.angular.z
+        
+        # Differential drive conversion
+        # For a rover: left = linear - angular, right = linear + angular
+        # Adjust the angular scaling factor if needed (0.5 is typical for wheeled robots)
+        wheel_base = 0.5  # Adjust based on your rover's wheel separation
+        left = linear - (angular * wheel_base)
+        right = linear + (angular * wheel_base)
+        
+        # Convert to rover's expected JSON format
         cmd = {
-            "forward": msg.linear.x,
-            "lateral": msg.linear.y,
-            "angular": msg.angular.z
+            "T": 1,
+            "L": int(left * 100),   # Scale to rover's expected range (adjust multiplier as needed)
+            "R": int(right * 100)
         }
         json_data = json.dumps(cmd)
         try:
