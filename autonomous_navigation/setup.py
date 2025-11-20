@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'simple_waypoint_follower = autonomous_navigation.simple_waypoint_follower:main',
+            'simple_autonomous_navigation = autonomous_navigation.simple_autonomous_navigation:main',
             'rover_serial_bridge = autonomous_navigation.rover_serial_bridge:main',
         ],
     },

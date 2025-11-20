@@ -12,7 +12,7 @@ simple_waypoint_follower:
     max_angular_speed: 0.8
     
     # Obstacle detection distance threshold (meters)
-    obstacle_distance: 1.0
+    obstacle_distance: 0.5
     
     # Obstacle detection angle from center (degrees)
     # This defines the front sector to check for obstacles

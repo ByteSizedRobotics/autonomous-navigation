@@ -102,11 +102,21 @@ class RoverSerialBridge(Node):
         left = linear - (angular * wheel_base)
         right = linear + (angular * wheel_base)
         
-        # Convert to rover's expected JSON format
+        # Convert to rover's expected JSON format with speed limiting
+        # Use very small multiplier since rover motor range is wide
+        multiplier = 2
+        left_cmd = round(left * multiplier)
+        right_cmd = round(right * multiplier)
+        
+        # Cap maximum speed to prevent too fast movement
+        max_speed = 0.2
+        left_cmd = max(-max_speed, min(max_speed, left_cmd))
+        right_cmd = max(-max_speed, min(max_speed, right_cmd))
+        
         cmd = {
             "T": 1,
-            "L": int(left * 1),   # Scale to rover's expected range (adjust multiplier as needed)
-            "R": int(right * 1)
+            "L": left_cmd,
+            "R": right_cmd
         }
         json_data = json.dumps(cmd)
         try:
