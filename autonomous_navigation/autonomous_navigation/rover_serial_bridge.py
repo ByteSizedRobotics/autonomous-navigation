@@ -105,13 +105,16 @@ class RoverSerialBridge(Node):
         # Convert to rover's expected JSON format
         cmd = {
             "T": 1,
-            "L": int(left * 100),   # Scale to rover's expected range (adjust multiplier as needed)
-            "R": int(right * 100)
+            "L": int(left * 1),   # Scale to rover's expected range (adjust multiplier as needed)
+            "R": int(right * 1)
         }
         json_data = json.dumps(cmd)
         try:
             self.ser.write((json_data + '\n').encode('utf-8'))
-            self.get_logger().info(f"Sent: {json_data}")
+            # Only log when command changes (not every command)
+            if not hasattr(self, 'last_cmd') or self.last_cmd != json_data:
+                self.get_logger().info(f"Sent: {json_data}")
+                self.last_cmd = json_data
             self.last_message_time = time.time()
         except serial.SerialException as e:
             self.get_logger().error(f"Serial write failed: {e}")
