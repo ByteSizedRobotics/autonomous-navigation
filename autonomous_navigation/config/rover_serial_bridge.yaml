@@ -1,0 +1,7 @@
+# Rover Serial Bridge Configuration
+
+rover_serial_bridge:
+  ros__parameters:
+    # Serial port for rover communication
+    # /dev/ttyAMA0 for Raspberry Pi GPIO pins
+    port: /dev/ttyAMA0
