@@ -91,13 +91,14 @@ class SimpleAutonomousNavigation(Node):
         """
         Detect obstacles using LiDAR and return avoidance angle
         Returns None if no obstacle, otherwise returns angle to steer (radians)
+        NOTE: LiDAR is mounted backwards, so we check angles around ±180° (back sector)
         """
         if self.lidar_data is None:
             return None
         
         scan = self.lidar_data
         
-        # Check front sector for obstacles
+        # Check BACK sector for obstacles (which is actually the FRONT of rover due to mounting)
         angle_min = scan.angle_min
         angle_increment = scan.angle_increment
         
@@ -113,20 +114,24 @@ class SimpleAutonomousNavigation(Node):
             
             angle = angle_min + i * angle_increment
             
-            # Check if in front sector
-            if abs(angle) < self.obstacle_angle:
+            # Check if in BACK sector (±180°), which is the actual front of the rover
+            # This checks angles between (π - obstacle_angle) and (π + obstacle_angle)
+            angle_from_back = abs(abs(angle) - math.pi)
+            
+            if angle_from_back < self.obstacle_angle:
                 front_distances.append(range_val)
                 
-                if angle < 0:  # Right side
+                # Determine left vs right relative to rover's actual front
+                if angle > 0:  # Positive angles, left side of back = right side of rover front
                     right_distances.append(range_val)
-                else:  # Left side
+                else:  # Negative angles, right side of back = left side of rover front
                     left_distances.append(range_val)
         
         # Debug: Log front corridor info
         if front_distances:
             min_dist = min(front_distances)
             self.get_logger().info(
-                f'Front corridor ({math.degrees(self.obstacle_angle):.0f}°): '
+                f'Front corridor ({math.degrees(self.obstacle_angle):.0f}° @ ±180°): '
                 f'min={min_dist:.2f}m, count={len(front_distances)}, '
                 f'threshold={self.obstacle_distance}m',
                 throttle_duration_sec=0.5

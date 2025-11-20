@@ -199,13 +199,14 @@ class SimpleWaypointFollower(Node):
         """
         Detect obstacles using LiDAR and return avoidance angle
         Returns None if no obstacle, otherwise returns angle to steer (radians)
+        NOTE: LiDAR is mounted backwards, so we check angles around ±180° (back sector)
         """
         if self.lidar_data is None:
             return None
         
         scan = self.lidar_data
         
-        # Check front sector for obstacles
+        # Check BACK sector for obstacles (which is actually the FRONT of rover due to mounting)
         angle_min = scan.angle_min
         angle_increment = scan.angle_increment
         
@@ -215,19 +216,23 @@ class SimpleWaypointFollower(Node):
         front_distances = []
         
         for i, range_val in enumerate(scan.ranges):
-            # Skip invalid readings
-            if range_val < scan.range_min or range_val > scan.range_max:
+            # Skip invalid readings (including inf)
+            if not math.isfinite(range_val) or range_val < scan.range_min or range_val > scan.range_max:
                 continue
             
             angle = angle_min + i * angle_increment
             
-            # Check if in front sector
-            if abs(angle) < self.obstacle_angle:
+            # Check if in BACK sector (±180°), which is the actual front of the rover
+            # This checks angles between (π - obstacle_angle) and (π + obstacle_angle)
+            angle_from_back = abs(abs(angle) - math.pi)
+            
+            if angle_from_back < self.obstacle_angle:
                 front_distances.append(range_val)
                 
-                if angle < 0:  # Right side
+                # Determine left vs right relative to rover's actual front
+                if angle > 0:  # Positive angles, left side of back = right side of rover front
                     right_distances.append(range_val)
-                else:  # Left side
+                else:  # Negative angles, right side of back = left side of rover front
                     left_distances.append(range_val)
         
         # Check if any obstacle is too close in front
