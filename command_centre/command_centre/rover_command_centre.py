@@ -105,6 +105,7 @@ class RoverCommandCentre(Node):
             
             if command_type == 'LaunchRover':
                 if (self.verify_rover_id(command_data)):  # verify rover ID before launching
+                    self.get_logger().info("LAUNCHUNNNNNGNGN")
                     self.launch_rover_autonomous()
 
             elif command_type == 'ManualControl':
@@ -574,9 +575,10 @@ class RoverCommandCentre(Node):
         # Set rover to autonomous state
         self.rover_state = RoverState.AUTONOMOUS
         
-        # Start required nodes for autonomous navigation
-        autonomous_nodes = ['serial_motor_imu', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'auto_nav']
-        
+        # Always restart auto_nav node for autonomous mode
+        autonomous_nodes = ['serial_motor_imu', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
+
+        # Start other autonomous nodes if not running
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
                 self.get_logger().info(f"Starting {node_name} for autonomous navigation")
@@ -586,6 +588,18 @@ class RoverCommandCentre(Node):
                     self.get_logger().error(f"Failed to start {node_name} - autonomous launch incomplete")
                     return False
                 time.sleep(1)  # Stagger startup to avoid resource conflicts
+
+        # Start/restart auto_nav node
+        self.get_logger().info("Restarting auto_nav node for autonomous navigation")
+        # if self.node_status['auto_nav'] == NodeStatus.RUNNING:
+        # self.stop_node('auto_nav')
+        time.sleep(0.5)
+        success = self.start_node('auto_nav')
+        if not success:
+            self.publish_node_status()
+            self.get_logger().error("Failed to start auto_nav - autonomous launch incomplete")
+            return False
+        time.sleep(1)
         
         # Publish node status after all startup attempts are complete
         self.publish_node_status()
@@ -626,10 +640,19 @@ class RoverCommandCentre(Node):
         if self.node_status['auto_nav'] == NodeStatus.RUNNING:
             self.get_logger().info("Stopping auto_nav for manual control")
             self.stop_node('auto_nav')
-        
-        # Ensure manual control nodes are running (serial_motor_imu needed for motor control)
-        manual_control_nodes = ['serial_motor_imu', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
-        
+
+        # Always restart serial_motor_imu for manual control to ensure /JSON is available
+        self.get_logger().info("Restarting serial_motor_imu for manual control")
+        # if self.node_status['serial_motor_imu'] == NodeStatus.RUNNING:
+        #     self.stop_node('serial_motor_imu')
+        #     time.sleep(0.5)
+        success = self.start_node('serial_motor_imu')
+        if not success:
+            self.get_logger().error("Failed to start serial_motor_imu - manual control setup incomplete")
+            return False
+
+        # Start other manual control nodes if not running
+        manual_control_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
                 self.get_logger().info(f"Starting {node_name} for manual control")
@@ -638,10 +661,10 @@ class RoverCommandCentre(Node):
                     self.get_logger().error(f"Failed to start {node_name} - manual control setup incomplete")
                     return False
                 time.sleep(0.5)
-        
+
         # Publish node status after all startup attempts are complete
         self.publish_node_status()
-        
+
         self.get_logger().info("ManualControl complete - ready for software commands")
         return True
     
