@@ -26,10 +26,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'simple_waypoint_follower = autonomous_navigation.simple_waypoint_follower:main',
-            'simple_autonomous_navigation = autonomous_navigation.simple_autonomous_navigation:main',
-            'simple_autonomous_navigation_fast_avoidance = autonomous_navigation.simple_autonomous_navigation_fast_avoidance:main',
-            'simple_autonomous_navigation_with_goal = autonomous_navigation.simple_autonomous_navigation_with_goal:main',
+            'autonomous_navigation_gps = autonomous_navigation.autonomous_navigation_gps:main',
+            'autonomous_navigation = autonomous_navigation.autonomous_navigation:main',
+            'autonomous_navigation_fast_avoidance = autonomous_navigation.autonomous_navigation_fast_avoidance:main',
+            'autonomous_navigation_with_goal = autonomous_navigation.autonomous_navigation_with_goal:main',
             'rover_serial_bridge = autonomous_navigation.rover_serial_bridge:main',
         ],
     },

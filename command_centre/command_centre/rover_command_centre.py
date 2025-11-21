@@ -55,13 +55,12 @@ class RoverCommandCentre(Node):
         # Node status tracking
         self.node_status = {
             'gps': NodeStatus.OFFLINE,
-            'rover': NodeStatus.OFFLINE,
+            'serial_motor_imu': NodeStatus.OFFLINE,
             'csi_camera_1': NodeStatus.OFFLINE,
             'csi_camera_2': NodeStatus.OFFLINE,
             'obstacle_detection': NodeStatus.OFFLINE,
-            # 'manual_control': NodeStatus.OFFLINE,
+            'auto_nav': NodeStatus.OFFLINE,
             'usb_camera': NodeStatus.OFFLINE
-            # 'motor_control': NodeStatus.OFFLINE
         }        
         # System state
         self.rover_state = RoverState.IDLE
@@ -168,11 +167,11 @@ class RoverCommandCentre(Node):
             # Define launch commands for each node
             launch_commands = {
                 'gps': 'ros2 run nmea_navsat_driver nmea_serial_driver',
-		        'rover': 'ros2 launch autonomous_navigation autonomous_navigation.launch.py',
+                'serial_motor_imu': 'ros2 run autonomous_navigation rover_serial_bridge',
+                'auto_nav': 'ros2 run autonomous_navigation autonomous_navigation',
                 'csi_camera_1': 'ros2 launch csi_camera_stream csi_camera_stream.launch.py',
                 'csi_camera_2': 'ros2 launch csi_camera_stream csi_camera_stream_2.launch.py',
                 'obstacle_detection': 'ros2 launch obstacle_detection obstacle_detector.launch.py',
-                # 'manual_control': 'ros2 run potrider wasd_control', # TODO: NATHAN we don't need this, UI publishes directly to /JSON
                 'usb_camera': 'ros2 launch csi_camera_stream usb_camera_stream.launch.py'
             }
             
@@ -286,9 +285,9 @@ class RoverCommandCentre(Node):
                 'csi_camera_1': ['csi_camera_video'],
                 'csi_camera_2': ['csi_camera_video_2'],
                 'usb_camera': ['usb_camera_video', 'usb_webRTC_publisher'],
-                'gps': ['gps_serial_driver'],
-                'rover': ['rover_serial_bridge', 'simple_waypoint_follower']
-                # 'manual_control': ['wasd_control']
+                'gps': ['nmea_serial_driver'],
+                'auto_nav': ['autonomous_navigation_gps', 'autonomous_navigation', 'autonomous_navigation_fast_avoidance', 'autonomous_navigation_with_goal'],
+                'serial_motor_imu': ['rover_serial_bridge']
             }
             
             # Terminate the tracked process if it exists (this is the launch process)
@@ -412,10 +411,13 @@ class RoverCommandCentre(Node):
             'obstacle_detector',      # Obstacle detection
             'csi_camera_video',       # Camera video
             'csi_camera_video_2',     # Second CSI Camera video
-            'usb_camera_video',      # USB Camera video
-            'gps_serial_driver',      # GPS driver
-            'rover_serial_bridge',      # IMU driver
-            'simple_waypoint_follower', # Waypoint follower
+            'usb_camera_video',       # USB Camera video
+            'nmea_serial_driver',     # GPS driver
+            'rover_serial_bridge',    # Serial motor and IMU bridge
+            'autonomous_navigation_gps',  # GPS waypoint navigation
+            'autonomous_navigation',      # Simple autonomous navigation
+            'autonomous_navigation_fast_avoidance',  # Fast avoidance navigation
+            'autonomous_navigation_with_goal',       # Goal-directed navigation
             'rplidar_composition',    # Alternative lidar node name
         ]
         
@@ -490,7 +492,7 @@ class RoverCommandCentre(Node):
         """
         self.get_logger().info("=== DIAGNOSTIC: Listing all rover-related processes ===")
         
-        keywords = ['rplidar', 'obstacle', 'camera', 'gps', 'rover', 
+        keywords = ['rplidar', 'obstacle', 'camera', 'gps', 'auto_nav', 'rover_serial_bridge', 
                    'ros2', 'launch', 'serial_driver']
         
         found_processes = []
@@ -572,8 +574,8 @@ class RoverCommandCentre(Node):
         # Set rover to autonomous state
         self.rover_state = RoverState.AUTONOMOUS
         
-        # Start required nodes for autonomous navigation'usb_camera',
-        autonomous_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
+        # Start required nodes for autonomous navigation
+        autonomous_nodes = ['serial_motor_imu', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'auto_nav']
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -584,11 +586,6 @@ class RoverCommandCentre(Node):
                     self.get_logger().error(f"Failed to start {node_name} - autonomous launch incomplete")
                     return False
                 time.sleep(1)  # Stagger startup to avoid resource conflicts
-        
-        # Stop manual control if it's running (autonomous navigation will control movement)
-        # if self.node_status['manual_control'] == NodeStatus.RUNNING:
-        #     self.get_logger().info("Stopping manual control - autonomous navigation will handle movement")
-        #     self.stop_node('manual_control')
         
         # Publish node status after all startup attempts are complete
         self.publish_node_status()
@@ -625,13 +622,13 @@ class RoverCommandCentre(Node):
         # Set rover to manual control state
         self.rover_state = RoverState.MANUAL_CONTROL
         
-        # Stop autonomous navigation node if it exists
-        # Note: You'll need to add 'autonomous_navigation' to your node_status dict if you have a dedicated autonomous nav node
-        # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
+        # Stop autonomous navigation node if running
+        if self.node_status['auto_nav'] == NodeStatus.RUNNING:
+            self.get_logger().info("Stopping auto_nav for manual control")
+            self.stop_node('auto_nav')
         
-        # Ensure manual control and motor control are running , 'usb_camera'
-        manual_control_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
-
+        # Ensure manual control nodes are running (serial_motor_imu needed for motor control)
+        manual_control_nodes = ['serial_motor_imu', 'gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
         
         for node_name in manual_control_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -658,8 +655,8 @@ class RoverCommandCentre(Node):
         # Set rover to idle state
         self.rover_state = RoverState.IDLE
         
-        # List of all nodes to stop (excludes the communication node itself) , 'usb_camera'
-        nodes_to_stop = ['rover', 'gps', 'csi_camera_1', 'csi_camera_2', 'usb_camera', 'obstacle_detection']
+        # List of all nodes to stop (excludes the communication node itself)
+        nodes_to_stop = ['auto_nav', 'serial_motor_imu', 'gps', 'csi_camera_1', 'csi_camera_2', 'usb_camera', 'obstacle_detection']
         
         # Stop all nodes regardless of their current status
         # (they might be in ERROR or STARTING state but still have processes running)

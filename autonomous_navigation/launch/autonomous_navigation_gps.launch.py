@@ -42,8 +42,8 @@ def generate_launch_description():
     # Waypoint follower node (GPS-based navigation)
     waypoint_follower_node = Node(
         package='autonomous_navigation',
-        executable='simple_waypoint_follower',
-        name='simple_waypoint_follower',
+        executable='autonomous_navigation_gps',
+        name='autonomous_navigation_gps',
         output='screen',
         parameters=[
             waypoint_config,

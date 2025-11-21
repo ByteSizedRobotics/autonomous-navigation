@@ -42,8 +42,8 @@ def generate_launch_description():
     # Simple autonomous navigation (deliberate turns)
     autonomous_nav_node = Node(
         package='autonomous_navigation',
-        executable='simple_autonomous_navigation',
-        name='simple_autonomous_navigation',
+        executable='autonomous_navigation',
+        name='autonomous_navigation',
         output='screen',
         parameters=[
             waypoint_config,

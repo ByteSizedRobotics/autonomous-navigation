@@ -42,8 +42,8 @@ def generate_launch_description():
     # Simple autonomous navigation with goal direction
     autonomous_nav_node = Node(
         package='autonomous_navigation',
-        executable='simple_autonomous_navigation_with_goal',
-        name='simple_autonomous_navigation_with_goal',
+        executable='autonomous_navigation_with_goal',
+        name='autonomous_navigation_with_goal',
         output='screen',
         parameters=[
             waypoint_config,

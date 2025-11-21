@@ -42,8 +42,8 @@ def generate_launch_description():
     # Simple autonomous navigation (fast/reactive avoidance)
     autonomous_nav_node = Node(
         package='autonomous_navigation',
-        executable='simple_autonomous_navigation_fast_avoidance',
-        name='simple_autonomous_navigation_fast_avoidance',
+        executable='autonomous_navigation_fast_avoidance',
+        name='autonomous_navigation_fast_avoidance',
         output='screen',
         parameters=[
             waypoint_config,
