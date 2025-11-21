@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Simple Autonomous Navigation Node (No GPS)
+Simple Autonomous Navigation Node - Fast Avoidance (No GPS)
 - Moves forward in a straight line when path is clear
 - Uses LiDAR for obstacle avoidance
-- Turns to avoid obstacles and continues moving
+- Continuously checks obstacles while turning (fast reactive avoidance)
 """
 
 import rclpy
@@ -12,12 +12,11 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 import math
 import numpy as np
-import time
 
 
-class SimpleAutonomousNavigation(Node):
+class SimpleAutonomousNavigationFastAvoidance(Node):
     def __init__(self):
-        super().__init__('simple_autonomous_navigation')
+        super().__init__('simple_autonomous_navigation_fast_avoidance')
         
         # Parameters (reuses waypoint_follower.yaml configuration)
         self.declare_parameter('max_linear_speed', 0.5)    # m/s
@@ -33,9 +32,6 @@ class SimpleAutonomousNavigation(Node):
         # State variables
         self.lidar_data = None
         self.last_obstacle_state = False  # Track obstacle detection state changes
-        self.is_turning = False  # Track if currently executing a turn maneuver
-        self.turn_start_time = None  # When the turn started
-        self.turn_duration = 0.5  # How long to turn (seconds) before re-scanning
         
         # Subscriptions
         self.lidar_sub = self.create_subscription(
@@ -51,7 +47,7 @@ class SimpleAutonomousNavigation(Node):
         # Control timer (10 Hz)
         self.control_timer = self.create_timer(0.1, self.control_loop)
         
-        self.get_logger().info('Simple Autonomous Navigation initialized (No GPS)')
+        self.get_logger().info('Simple Autonomous Navigation (Fast Avoidance) initialized (No GPS)')
         self.get_logger().info(f'Max speeds: linear={self.max_linear_speed} m/s, angular={self.max_angular_speed} rad/s')
         self.get_logger().info(f'Obstacle detection: {self.obstacle_distance}m at {math.degrees(self.obstacle_angle):.0f}°')
     
@@ -66,34 +62,16 @@ class SimpleAutonomousNavigation(Node):
             self.publish_velocity(0.0, 0.0)
             return
         
-        # If currently turning, continue turning until duration expires
-        if self.is_turning:
-            elapsed = time.time() - self.turn_start_time
-            if elapsed < self.turn_duration:
-                # Still turning, continue the turn command
-                return
-            else:
-                # Turn complete, stop and re-scan
-                self.is_turning = False
-                self.get_logger().info('Turn complete, re-scanning...')
-                self.publish_velocity(0.0, 0.0)
-                time.sleep(0.3)  # Brief pause to stabilize
-                return
-        
         # Check for obstacles and get avoidance direction
         obstacle_avoidance_angle = self.detect_obstacles()
         
         if obstacle_avoidance_angle is not None:
-            # Obstacle detected - start turn maneuver
+            # Obstacle detected - turn to avoid
             if not self.last_obstacle_state:  # Only log when obstacle first detected
                 self.get_logger().info(f'Obstacle detected! Turning {math.degrees(obstacle_avoidance_angle):.1f}°')
                 self.last_obstacle_state = True
             
-            # Start turning maneuver
-            self.is_turning = True
-            self.turn_start_time = time.time()
-            
-            # Turn in place (no forward movement)
+            # Turn in place (no forward movement) to avoid obstacle
             linear_vel = 0.0
             angular_vel = obstacle_avoidance_angle / abs(obstacle_avoidance_angle) * self.max_angular_speed
             
@@ -189,7 +167,7 @@ class SimpleAutonomousNavigation(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = SimpleAutonomousNavigation()
+    node = SimpleAutonomousNavigationFastAvoidance()
     
     try:
         rclpy.spin(node)

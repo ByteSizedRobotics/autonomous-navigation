@@ -105,11 +105,23 @@ class RoverSerialBridge(Node):
         # Convert to rover's expected JSON format with speed limiting
         # Use very small multiplier since rover motor range is wide
         multiplier = 2
+        
+        # Apply extra multiplier when turning (when angular velocity is present)
+        if abs(angular) > 0.01:  # Turning detected
+            turn_multiplier = 1.0  # Adjust this value (1.5, 2.0, 3.0, etc.)
+            multiplier = multiplier * turn_multiplier
+        
         left_cmd = round(left * multiplier)
         right_cmd = round(right * multiplier)
         
-        # Cap maximum speed to prevent too fast movement
-        max_speed = 0.2
+        # Cap maximum speed - different limits for straight vs turning
+        if abs(angular) > 0.01:  # Turning
+            # self.get_logger().info(f"TURNING: Angular speed is {angular}")
+            max_speed = 1.0
+        else:  # Straight movement
+            # self.get_logger().info(f"STRAIGHT: Angular speed is {angular}")
+            max_speed = 0.2
+        
         left_cmd = max(-max_speed, min(max_speed, left_cmd))
         right_cmd = max(-max_speed, min(max_speed, right_cmd))
         

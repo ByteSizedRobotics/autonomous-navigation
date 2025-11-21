@@ -573,9 +573,7 @@ class RoverCommandCentre(Node):
         self.rover_state = RoverState.AUTONOMOUS
         
         # Start required nodes for autonomous navigation'usb_camera',
-        autonomous_nodes = ['gps', 'obstacle_detection', 'rover', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
-        # autonomous_nodes = ['usb_camera', 'csi_camera_1', 'csi_camera_2']
-
+        autonomous_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
         
         for node_name in autonomous_nodes:
             if self.node_status[node_name] != NodeStatus.RUNNING:
@@ -632,8 +630,7 @@ class RoverCommandCentre(Node):
         # For now, we'll stop obstacle detection as it's primarily used for autonomous navigation
         
         # Ensure manual control and motor control are running , 'usb_camera'
-        manual_control_nodes = ['gps', 'obstacle_detection', 'rover', 'usb_camera', 'csi_camera_1', 'csi_camera_2']
-        #manual_control_nodes = ['manual_control', 'gps', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
+        manual_control_nodes = ['gps', 'obstacle_detection', 'usb_camera', 'csi_camera_1', 'csi_camera_2', 'rover']
 
         
         for node_name in manual_control_nodes:

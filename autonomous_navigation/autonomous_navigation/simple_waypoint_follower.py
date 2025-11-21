@@ -25,7 +25,7 @@ class SimpleWaypointFollower(Node):
         self.declare_parameter('max_linear_speed', 0.5)    # m/s
         self.declare_parameter('max_angular_speed', 0.8)   # rad/s
         self.declare_parameter('obstacle_distance', 0.5)   # meters
-        self.declare_parameter('obstacle_angle', 60.0)     # degrees
+        self.declare_parameter('obstacle_angle', 40.0)     # degrees
         
         self.waypoint_threshold = self.get_parameter('waypoint_threshold').value
         self.max_linear_speed = self.get_parameter('max_linear_speed').value
