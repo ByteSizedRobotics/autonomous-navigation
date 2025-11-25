@@ -18,7 +18,7 @@ class USBVideoNode(Node):
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera')
         self.declare_parameter('camera_device', '/dev/USB_camera')  # Default to /dev/video8
-        self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
+        self.declare_parameter('jpeg_quality', 50)  # JPEG compression quality (1-100) - Lower for better performance
 
         self.width = self.get_parameter('width').value
         self.height = self.get_parameter('height').value
@@ -34,8 +34,8 @@ class USBVideoNode(Node):
         else:
             self.device_path = self.camera_device
         
-        # Create publishers
-        self.image_pub = self.create_publisher(Image, 'usb_video_stream', 1)
+        # Create publishers - Only publish compressed for performance
+        # self.image_pub = self.create_publisher(Image, 'usb_video_stream', 1)  # Disabled for performance
         self.compressed_pub = self.create_publisher(CompressedImage, 'usb_video_stream/compressed', 1)
         self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info', 1)
         
@@ -149,13 +149,7 @@ class USBVideoNode(Node):
                 
                 now = self.get_clock().now().to_msg()
                 
-                # Publish raw image
-                img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-                img_msg.header.stamp = now
-                img_msg.header.frame_id = self.camera_frame_id
-                self.image_pub.publish(img_msg)
-                
-                # Publish compressed image (for WebRTC)
+                # Only publish compressed image for WebRTC (raw disabled for performance)
                 _, jpeg_buffer = cv2.imencode('.jpg', frame, jpeg_params)
                 compressed_msg = CompressedImage()
                 compressed_msg.header.stamp = now

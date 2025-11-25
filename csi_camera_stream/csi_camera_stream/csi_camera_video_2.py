@@ -20,7 +20,7 @@ class CSIVideo2Node(Node):
         self.declare_parameter('height', 720)
         self.declare_parameter('fps', 30)
         self.declare_parameter('camera_frame_id', 'camera_2')
-        self.declare_parameter('jpeg_quality', 70)  # JPEG compression quality (1-100)
+        self.declare_parameter('jpeg_quality', 50)  # JPEG compression quality (1-100) - Lower for better performance
         self.declare_parameter('camera_id', 1)  # Camera index for libcamera
 
         self.width = self.get_parameter('width').value
@@ -30,8 +30,8 @@ class CSIVideo2Node(Node):
         self.jpeg_quality = self.get_parameter('jpeg_quality').value
         self.camera_id = self.get_parameter('camera_id').value
         
-        # Create publishers with unique topic names
-        self.image_pub = self.create_publisher(Image, 'csi_video_stream_2', 1)
+        # Create publishers with unique topic names - Only publish compressed for performance
+        # self.image_pub = self.create_publisher(Image, 'csi_video_stream_2', 1)  # Disabled for performance
         self.compressed_pub = self.create_publisher(CompressedImage, 'csi_video_stream_2/compressed', 1)
         self.camera_info_pub = self.create_publisher(CameraInfo, 'camera_info_2', 1)
         
@@ -68,9 +68,9 @@ class CSIVideo2Node(Node):
             os.remove(fifo_path)
         os.mkfifo(fifo_path)
 
-        # Start libcamera-vid process with optimized settings and camera selection
-        # Using MJPEG codec with quality control for better performance
-        cmd = f"libcamera-vid -t 0 --camera {self.camera_id} --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --quality {self.jpeg_quality} --inline -o {fifo_path} --nopreview"
+        # Start libcamera-vid process with optimized settings for low latency
+        # Using MJPEG codec with quality control and latency optimizations
+        cmd = f"libcamera-vid -t 0 --camera {self.camera_id} --width {self.width} --height {self.height} --framerate {self.fps} --codec mjpeg --quality {self.jpeg_quality} --inline --flush -o {fifo_path} --nopreview --denoise off --tuning-file /usr/share/libcamera/ipa/rpi/vc4/imx219_noir.json"
         process = sp.Popen(shlex.split(cmd), stderr=sp.PIPE)
 
         # OpenCV Capture from the named pipe
@@ -128,13 +128,7 @@ class CSIVideo2Node(Node):
                 
                 now = self.get_clock().now().to_msg()
                 
-                # Publish raw image
-                img_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
-                img_msg.header.stamp = now
-                img_msg.header.frame_id = self.camera_frame_id
-                self.image_pub.publish(img_msg)
-                
-                # Publish compressed image (for WebRTC)
+                # Only publish compressed image for WebRTC (raw disabled for performance)
                 _, jpeg_buffer = cv2.imencode('.jpg', frame, jpeg_params)
                 compressed_msg = CompressedImage()
                 compressed_msg.header.stamp = now

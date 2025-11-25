@@ -593,13 +593,13 @@ class RoverCommandCentre(Node):
         self.get_logger().info("Restarting auto_nav node for autonomous navigation")
         # if self.node_status['auto_nav'] == NodeStatus.RUNNING:
         # self.stop_node('auto_nav')
-        time.sleep(0.5)
+        #time.sleep(0.5)
         success = self.start_node('auto_nav')
         if not success:
             self.publish_node_status()
             self.get_logger().error("Failed to start auto_nav - autonomous launch incomplete")
             return False
-        time.sleep(1)
+        #time.sleep(1)
         
         # Publish node status after all startup attempts are complete
         self.publish_node_status()

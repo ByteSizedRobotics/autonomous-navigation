@@ -66,8 +66,18 @@ class WebRTCPublisherNode(Node):
             super().__init__()
             self.publisher_node = publisher_node
             self.default_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+            self.last_frame_time = 0
+            self.frame_interval = 1.0 / 30.0  # 30 FPS target
         
         async def recv(self):
+            # Rate limit frame delivery to prevent buffering
+            import time
+            current_time = time.time()
+            time_since_last = current_time - self.last_frame_time
+            if time_since_last < self.frame_interval:
+                await asyncio.sleep(self.frame_interval - time_since_last)
+            self.last_frame_time = time.time()
+            
             frame_data = self.publisher_node.get_current_frame()
             video_frame = av.VideoFrame.from_ndarray(frame_data if frame_data is not None else self.default_frame, format="bgr24")
             pts, time_base = await self.next_timestamp()
